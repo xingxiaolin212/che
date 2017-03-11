@@ -70,4 +70,6 @@ public class RuleListener implements IInvokedMethodListener {
     public void afterInvocation(IInvokedMethod method, ITestResult testResult) {
 
     }
+
+
 }

@@ -26,8 +26,6 @@
             <plugin>
                 <groupId>org.eclipse.che.core</groupId>
                 <artifactId>che-gwt-maven-plugin</artifactId>
-                <configuration>
-                </configuration>
                 <extensions>true</extensions>
             </plugin>
         </plugins>

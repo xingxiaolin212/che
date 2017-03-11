@@ -31,7 +31,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Generate implementation for {@link DynaProvider}.
- * Find all types annotated with {@link DynaObject} and add {@link com.google.inject.Provider} for them to {@link DynaProvider} implementation.
+ * Find all types annotated with {@link DynaObject} and add com.google.inject.Provider for them to {@link DynaProvider} implementation.
  *
  * @author Evgen Vidolob
  */

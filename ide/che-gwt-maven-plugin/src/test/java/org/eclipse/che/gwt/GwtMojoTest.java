@@ -20,7 +20,7 @@ import java.io.File;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-//ßimport org.testng.annotations.Test;
+//import org.testng.annotations.Test;
 
 /**
  * Created by sj on 10.03.17.
@@ -52,7 +52,6 @@ public class GwtMojoTest {
      */
     protected void configure(GwtMojo mojo, File baseDir) throws Exception {
         this.rule.setVariableValueToObject(mojo, "targetDirectory", this.resources.getBasedir(""));
-        this.rule.setVariableValueToObject(mojo, "useClassPath", true);
     }
 
     @Test
@@ -61,7 +60,8 @@ public class GwtMojoTest {
         File pom = new File(projectCopy, "pom.xml");
         assertNotNull(pom);
         assertTrue(pom.exists());
-
+//        MavenProject project3 =
+//                rule.readMavenProject(projectCopy);
         GwtMojo mojo = (GwtMojo)this.rule.lookupMojo("generate", pom);
         configure(mojo, projectCopy);
         mojo.execute();
