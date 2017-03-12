@@ -15,20 +15,30 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.eclipse.che.test</groupId>
-    <artifactId>my-typescript-test-module</artifactId>
+    <groupId>org.apache.maven.plugin.my.unit</groupId>
+    <artifactId>project-to-test</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
-    <name>Test of Eclipse Che TypeScript plugin</name>
+    <packaging>jar</packaging>
+    <name>Test MyMojo</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>org.eclipse.che.core</groupId>
                 <artifactId>che-gwt-maven-plugin</artifactId>
-                <extensions>true</extensions>
+                <configuration>
+                    <!-- Specify the GwtMojo parameter -->
+                    <outputDirectory>target/test-harness/project-to-test</outputDirectory>
+                </configuration>
             </plugin>
         </plugins>
     </build>
-
 </project>

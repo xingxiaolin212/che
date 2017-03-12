@@ -8,7 +8,8 @@
  * Contributors:
  *   Codenvy, S.A. - initial API and implementation
  *******************************************************************************/
-package org.eclipse.che.gwt;
+package org.eclipse.che.maven;
+
 
 import org.apache.maven.plugin.testing.MojoRule;
 import org.apache.maven.plugin.testing.resources.TestResources;
@@ -20,12 +21,9 @@ import java.io.File;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-//import org.testng.annotations.Test;
-
 /**
- * Created by sj on 10.03.17.
+ * @author Sergii Kabshniuk
  */
-//@Listeners(RuleListener.class)
 public class GwtMojoTest {
 
     /**
@@ -38,32 +36,25 @@ public class GwtMojoTest {
      * Resources of each test mapped on the name of the method
      */
     @Rule
-    public TestResources resources = new TestResources();
+    public TestResources resources = new TestResources("src/test/resources/unit", "target/test-projects");
 
     /**
-     * Helper method used to inject data in mojo
-     *
-     * @param mojo
-     *         the mojo
-     * @param baseDir
-     *         root dir on which we extract files
-     * @throws IllegalAccessException
-     *         if unable to set variables
+     * @throws Exception
+     *         if any
      */
-    protected void configure(GwtMojo mojo, File baseDir) throws Exception {
-        this.rule.setVariableValueToObject(mojo, "targetDirectory", this.resources.getBasedir(""));
-    }
-
     @Test
-    public void testshouldTest() throws Exception {
-        File projectCopy = this.resources.getBasedir("project");
+    public void testSomething()
+            throws Exception {
+
+        File projectCopy = this.resources.getBasedir("project-to-test");
         File pom = new File(projectCopy, "pom.xml");
         assertNotNull(pom);
         assertTrue(pom.exists());
-//        MavenProject project3 =
-//                rule.readMavenProject(projectCopy);
-        GwtMojo mojo = (GwtMojo)this.rule.lookupMojo("generate", pom);
-        configure(mojo, projectCopy);
-        mojo.execute();
+
+        GwtMojo gwtMojo = (GwtMojo)rule.lookupMojo("touch", pom);
+        assertNotNull(gwtMojo);
+        gwtMojo.execute();
+
     }
+
 }
