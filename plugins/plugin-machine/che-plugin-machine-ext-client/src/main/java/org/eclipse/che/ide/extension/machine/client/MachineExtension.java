@@ -72,7 +72,7 @@ import static org.eclipse.che.ide.api.constraints.Constraints.FIRST;
  */
 @Singleton
 @Extension(title = "Machine", version = "1.0.0")
-public class MachineExtension {
+public class MachineExtension implements WsAgentStateHandler {
 
     public static final String GROUP_MACHINE_TOOLBAR   = "MachineGroupToolbar";
     public static final String GROUP_COMMANDS_DROPDOWN = "CommandsSelector";
@@ -81,6 +81,7 @@ public class MachineExtension {
     public static final String GROUP_MACHINES_LIST     = "MachinesListGroup";
 
     private final PerspectiveManager perspectiveManager;
+    private final Provider<ServerPortProvider> machinePortProvider;
 
     /**
      * Controls central toolbar action group visibility. Use for example next snippet:
@@ -109,18 +110,7 @@ public class MachineExtension {
         terminalResources.getTerminalStyle().ensureInjected();
         machineStatusHandlerProvider.get();
 
-        eventBus.addHandler(WsAgentStateEvent.TYPE, new WsAgentStateHandler() {
-            @Override
-            public void onWsAgentStarted(WsAgentStateEvent event) {
-                restoreTerminal();
-
-                machinePortProvider.get();
-            }
-
-            @Override
-            public void onWsAgentStopped(WsAgentStateEvent event) {
-            }
-        });
+        this.machinePortProvider = machinePortProvider;
 
         eventBus.addHandler(WorkspaceStartingEvent.TYPE, new WorkspaceStartingEvent.Handler() {
             @Override
@@ -161,6 +151,17 @@ public class MachineExtension {
                 callback.onSuccess(null);
             }
         }, new String[]{"term/xterm"}, new String[]{"Xterm"});
+    }
+
+    @Override
+    public void onWsAgentStarted(WsAgentStateEvent event) {
+        restoreTerminal();
+
+        machinePortProvider.get();
+    }
+
+    @Override
+    public void onWsAgentStopped(WsAgentStateEvent event) {
     }
 
     /**

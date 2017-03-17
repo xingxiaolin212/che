@@ -21,8 +21,10 @@ import org.eclipse.che.ide.api.command.CommandManager;
 import org.eclipse.che.ide.api.command.CommandType;
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
 import org.eclipse.che.ide.api.machine.MachineEntity;
+import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.ide.api.macro.Macro;
 import org.eclipse.che.ide.api.outputconsole.OutputConsole;
+import org.eclipse.che.ide.extension.machine.client.MachineExtension;
 import org.eclipse.che.ide.extension.machine.client.RecipeScriptDownloadServiceClient;
 import org.eclipse.che.ide.extension.machine.client.RecipeScriptDownloadServiceClientImpl;
 import org.eclipse.che.ide.extension.machine.client.command.CommandManagerImpl;
@@ -49,6 +51,7 @@ import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.TabI
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.header.TabHeader;
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.header.TabHeaderImpl;
 import org.eclipse.che.ide.extension.machine.client.processes.actions.ConsoleTreeContextMenuFactory;
+import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelView;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelViewImpl;
 import org.eclipse.che.ide.extension.machine.client.targets.BaseTarget;
@@ -122,5 +125,9 @@ public class MachineGinModule extends AbstractGinModule {
         categoryPageBinder.addBinding().to(DevelopmentCategoryPresenter.class);
 
         install(new GinFactoryModuleBuilder().build(ConsoleTreeContextMenuFactory.class));
+
+        GinMultibinder<WsAgentStateHandler> wsAgentStateHandlerBinder = GinMultibinder.newSetBinder(binder(), WsAgentStateHandler.class);
+        wsAgentStateHandlerBinder.addBinding().to(MachineExtension.class);
+        wsAgentStateHandlerBinder.addBinding().to(ProcessesPanelPresenter.class);
     }
 }
