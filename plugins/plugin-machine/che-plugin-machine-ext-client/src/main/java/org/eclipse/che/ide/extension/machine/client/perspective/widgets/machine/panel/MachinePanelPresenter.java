@@ -23,6 +23,7 @@ import org.eclipse.che.api.core.model.workspace.WorkspaceRuntime;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.ide.api.app.AppContext;
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.event.ActivePartChangedEvent;
 import org.eclipse.che.ide.api.event.ActivePartChangedHandler;
 import org.eclipse.che.ide.api.machine.MachineEntity;
@@ -56,7 +57,8 @@ public class MachinePanelPresenter extends BasePresenter implements MachinePanel
                                                                     MachineStateEvent.Handler,
                                                                     WorkspaceStartedEvent.Handler,
                                                                     WorkspaceStoppedEvent.Handler,
-                                                                    ActivePartChangedHandler {
+                                                                    ActivePartChangedHandler,
+                                                                    RegistrableComponent {
     private final MachinePanelView             view;
     private final EventBus                     eventBus;
     private final EntityFactory                entityFactory;
@@ -96,9 +98,13 @@ public class MachinePanelPresenter extends BasePresenter implements MachinePanel
         this.existingMachineNodes = new HashMap<>();
         this.cachedMachines = new HashMap<>();
 
+        eventBus.addHandler(ActivePartChangedEvent.TYPE, this);
+    }
+
+    @Override
+    public void register() {
         eventBus.addHandler(WorkspaceStartedEvent.TYPE, this);
         eventBus.addHandler(WorkspaceStoppedEvent.TYPE, this);
-        eventBus.addHandler(ActivePartChangedEvent.TYPE, this);
     }
 
     /** Gets all machines and adds them to special place on view. */

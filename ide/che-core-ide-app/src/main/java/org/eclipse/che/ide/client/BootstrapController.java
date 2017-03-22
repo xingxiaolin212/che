@@ -32,6 +32,7 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.component.Component;
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.component.WsAgentComponent;
 import org.eclipse.che.ide.api.event.WindowActionEvent;
 import org.eclipse.che.ide.api.machine.DevMachine;
@@ -44,6 +45,7 @@ import org.eclipse.che.ide.context.AppContextImpl;
 import org.eclipse.che.ide.resource.Path;
 import org.eclipse.che.ide.statepersistance.AppStateManager;
 import org.eclipse.che.ide.util.loging.Log;
+import org.eclipse.che.ide.workspace.WorkspaceComponentProvider;
 import org.eclipse.che.ide.workspace.WorkspacePresenter;
 
 import java.util.Iterator;
@@ -96,12 +98,21 @@ public class BootstrapController {
     }
 
     @Inject
-    private void startComponents(Map<String, Provider<Component>> components) {
-        startComponents(components.entrySet().iterator());
+    private void startComponents(Map<String, Provider<Component>> components,
+                                 WorkspaceComponentProvider workspaceComponentProvider,
+                                 Map<String, Provider<RegistrableComponent>> registrableComponentMap) {
+        Log.info(getClass(), "START COMPONENT");
+        startComponents(components.entrySet().iterator(), registrableComponentMap, workspaceComponentProvider);
+
+//        Log.info(getClass(), "register ");
+//        for (Provider<RegistrableComponent> registrableComponentProvider: registrableComponentMap.values()) {
+//            registrableComponentProvider.get().register();
+//        }
     }
 
     @Inject
     private void startWsAgentComponents(EventBus eventBus, final Map<String, Provider<WsAgentComponent>> components) {
+        Log.info(getClass(), "START WSAGENT COMPONENT");
         eventBus.addHandler(WorkspaceStartedEvent.TYPE, new WorkspaceStartedEvent.Handler() {
             @Override
             public void onWorkspaceStarted(WorkspaceStartedEvent event) {
@@ -132,10 +143,13 @@ public class BootstrapController {
         });
     }
 
-    private void startComponents(final Iterator<Map.Entry<String,  Provider<Component>>> componentIterator) {
+    private void startComponents(final Iterator<Map.Entry<String,  Provider<Component>>> componentIterator,
+                                 final Map<String, Provider<RegistrableComponent>> registrableComponentMap,
+                                 final WorkspaceComponentProvider workspaceComponentProvider) {
         if (componentIterator.hasNext()) {
             Map.Entry<String,  Provider<Component>> entry = componentIterator.next();
             final String componentName = entry.getKey();
+            Log.info(getClass(), "Component name" + componentName);
 
             try {
                 Provider<Component> componentProvider = entry.getValue();
@@ -147,7 +161,7 @@ public class BootstrapController {
                         Scheduler.get().scheduleDeferred(new ScheduledCommand() {
                             @Override
                             public void execute() {
-                                startComponents(componentIterator);
+                                startComponents(componentIterator, registrableComponentMap, workspaceComponentProvider);
                             }
                         });
                     }
@@ -164,7 +178,25 @@ public class BootstrapController {
             }
 
         } else {
-            startExtensionsAndDisplayUI();
+            Log.info(getClass(), "register ");
+            for (Map.Entry<String, Provider<RegistrableComponent>> registerComponentEntryProvider: registrableComponentMap.entrySet()) {
+                Log.info(getClass(), " Register component: " + registerComponentEntryProvider.getKey());
+                registerComponentEntryProvider.getValue().get().register();
+            }
+            Log.info(getClass(), "Start workspaceComponentProvider");
+            workspaceComponentProvider.get().start(new Callback<Component, Exception>() {
+                @Override
+                public void onFailure(Exception reason) {
+
+                }
+
+                @Override
+                public void onSuccess(Component result) {
+                    Log.info(getClass(), "start Extension and display UI");
+                    startExtensionsAndDisplayUI();
+                }
+            });
+
         }
     }
 

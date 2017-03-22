@@ -19,14 +19,13 @@ import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
 
-import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.actions.StopWorkspaceAction;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.action.IdeActions;
-import org.eclipse.che.ide.api.app.AppContext;
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.extension.Extension;
 import org.eclipse.che.ide.api.icon.Icon;
 import org.eclipse.che.ide.api.icon.IconRegistry;
@@ -45,7 +44,6 @@ import org.eclipse.che.ide.extension.machine.client.actions.SelectCommandComboBo
 import org.eclipse.che.ide.extension.machine.client.actions.ShowConsoleTreeAction;
 import org.eclipse.che.ide.extension.machine.client.actions.SwitchPerspectiveAction;
 import org.eclipse.che.ide.extension.machine.client.command.macros.ServerPortProvider;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStatusHandler;
 import org.eclipse.che.ide.extension.machine.client.perspective.terminal.TerminalInitializePromiseHolder;
 import org.eclipse.che.ide.extension.machine.client.processes.NewTerminalAction;
 import org.eclipse.che.ide.extension.machine.client.processes.actions.CloseConsoleAction;
@@ -72,7 +70,7 @@ import static org.eclipse.che.ide.api.constraints.Constraints.FIRST;
  */
 @Singleton
 @Extension(title = "Machine", version = "1.0.0")
-public class MachineExtension {
+public class MachineExtension implements RegistrableComponent {
 
     public static final String GROUP_MACHINE_TOOLBAR   = "MachineGroupToolbar";
     public static final String GROUP_COMMANDS_DROPDOWN = "CommandsSelector";
@@ -81,6 +79,8 @@ public class MachineExtension {
     public static final String GROUP_MACHINES_LIST     = "MachinesListGroup";
 
     private final PerspectiveManager perspectiveManager;
+    private final Provider<ServerPortProvider> machinePortProvider;
+    private final EventBus eventBus;
 
     /**
      * Controls central toolbar action group visibility. Use for example next snippet:
@@ -99,46 +99,14 @@ public class MachineExtension {
                             final EventBus eventBus,
                             final Provider<ServerPortProvider> machinePortProvider,
                             final PerspectiveManager perspectiveManager,
-                            final Provider<MachineStatusHandler> machineStatusHandlerProvider,
-                            final AppContext appContext,
                             final TerminalInitializePromiseHolder terminalModule,
                             final RequireJsLoader requireJsLoader) {
         this.perspectiveManager = perspectiveManager;
+        this.eventBus = eventBus;
+        this.machinePortProvider = machinePortProvider;
 
         machineResources.getCss().ensureInjected();
         terminalResources.getTerminalStyle().ensureInjected();
-        machineStatusHandlerProvider.get();
-
-        eventBus.addHandler(WsAgentStateEvent.TYPE, new WsAgentStateHandler() {
-            @Override
-            public void onWsAgentStarted(WsAgentStateEvent event) {
-                restoreTerminal();
-
-                machinePortProvider.get();
-            }
-
-            @Override
-            public void onWsAgentStopped(WsAgentStateEvent event) {
-            }
-        });
-
-        eventBus.addHandler(WorkspaceStartingEvent.TYPE, new WorkspaceStartingEvent.Handler() {
-            @Override
-            public void onWorkspaceStarting(WorkspaceStartingEvent event) {
-                maximizeTerminal();
-            }
-        });
-
-        eventBus.addHandler(WorkspaceStoppedEvent.TYPE, new WorkspaceStoppedEvent.Handler() {
-            @Override
-            public void onWorkspaceStopped(WorkspaceStoppedEvent event) {
-                maximizeTerminal();
-            }
-        });
-
-        if (appContext.getWorkspace() == null || WorkspaceStatus.RUNNING != appContext.getWorkspace().getStatus()) {
-            maximizeTerminal();
-        }
 
         Promise<Void> termInitPromise = AsyncPromiseHelper.createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<Void>() {
             @Override
@@ -264,5 +232,35 @@ public class MachineExtension {
         keyBinding.getGlobal().addKey(new KeyBuilder().alt().charCode(KeyCodeMap.F12).build(), "newTerminal");
 
         iconRegistry.registerIcon(new Icon("che.machine.icon", machineResources.devMachine()));
+    }
+
+    @Override
+    public void register() {
+        eventBus.addHandler(WsAgentStateEvent.TYPE, new WsAgentStateHandler() {
+            @Override
+            public void onWsAgentStarted(WsAgentStateEvent event) {
+                restoreTerminal();
+
+                machinePortProvider.get();
+            }
+
+            @Override
+            public void onWsAgentStopped(WsAgentStateEvent event) {
+            }
+        });
+
+        eventBus.addHandler(WorkspaceStartingEvent.TYPE, new WorkspaceStartingEvent.Handler() {
+            @Override
+            public void onWorkspaceStarting(WorkspaceStartingEvent event) {
+                maximizeTerminal();
+            }
+        });
+
+        eventBus.addHandler(WorkspaceStoppedEvent.TYPE, new WorkspaceStoppedEvent.Handler() {
+            @Override
+            public void onWorkspaceStopped(WorkspaceStoppedEvent event) {
+                maximizeTerminal();
+            }
+        });
     }
 }

@@ -21,6 +21,9 @@ import org.eclipse.che.api.core.model.machine.MachineConfig;
 import org.eclipse.che.api.core.model.workspace.Workspace;
 import org.eclipse.che.api.core.model.workspace.WorkspaceRuntime;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
+import org.eclipse.che.api.promises.client.Operation;
+import org.eclipse.che.api.promises.client.OperationException;
+import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
@@ -33,6 +36,7 @@ import org.eclipse.che.ide.api.command.CommandImpl;
 import org.eclipse.che.ide.api.command.CommandManager;
 import org.eclipse.che.ide.api.command.CommandType;
 import org.eclipse.che.ide.api.command.CommandTypeRegistry;
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.machine.MachineEntity;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
@@ -44,6 +48,7 @@ import org.eclipse.che.ide.extension.machine.client.inject.factories.EntityFacto
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.ui.dropdown.DropDownListFactory;
 import org.eclipse.che.ide.ui.dropdown.DropDownWidget;
+import org.eclipse.che.ide.util.loging.Log;
 import org.vectomatic.dom.svg.ui.SVGImage;
 
 import javax.validation.constraints.NotNull;
@@ -72,7 +77,8 @@ public class SelectCommandComboBox extends AbstractPerspectiveAction implements 
                                                                                 WsAgentStateHandler,
                                                                                 MachineStateEvent.Handler,
                                                                                 WorkspaceStartedEvent.Handler,
-                                                                                WorkspaceStoppedEvent.Handler {
+                                                                                WorkspaceStoppedEvent.Handler,
+                                                                                RegistrableComponent {
 
     public static final String GROUP_COMMANDS = "CommandsGroup";
     public static final String GROUP_MACHINES = "MachinesGroup";
@@ -90,6 +96,7 @@ public class SelectCommandComboBox extends AbstractPerspectiveAction implements 
     private final List<CommandImpl>           commands;
     private final DefaultActionGroup          commandActions;
     private final DefaultActionGroup          machinesActions;
+    private final EventBus                    eventBus;
 
     private boolean workspaceRunning = false;
 
@@ -115,6 +122,7 @@ public class SelectCommandComboBox extends AbstractPerspectiveAction implements 
         this.entityFactory = entityFactory;
         this.commandTypeRegistry = commandTypeRegistry;
         this.appContext = appContext;
+        this.eventBus = eventBus;
 
         this.registeredMachineMap = new HashMap<>();
         this.commands = new ArrayList<>();
@@ -129,16 +137,11 @@ public class SelectCommandComboBox extends AbstractPerspectiveAction implements 
 
         machinesActions = new DefaultActionGroup(GROUP_MACHINES, false, actionManager);
         actionManager.registerAction(GROUP_MACHINES, machinesActions);
-
-        eventBus.addHandler(WsAgentStateEvent.TYPE, this);
-        eventBus.addHandler(MachineStateEvent.TYPE, this);
-        eventBus.addHandler(WorkspaceStartedEvent.TYPE, this);
-        eventBus.addHandler(WorkspaceStoppedEvent.TYPE, this);
     }
 
     @Override
     public void updateInPerspective(@NotNull ActionEvent event) {
-        event.getPresentation().setVisible(workspaceRunning);
+        event.getPresentation().setVisible(workspaceRunning);//todo use WSAgentState, but it's broken
     }
 
     @Override
@@ -325,8 +328,15 @@ public class SelectCommandComboBox extends AbstractPerspectiveAction implements 
     @Override
     public void onWsAgentStarted(WsAgentStateEvent event) {
         workspaceRunning = true;
-        loadCommands(null);
-        loadMachines();
+        commandManager.retrieveAllCommands().then(arg -> {
+            loadCommands(null);
+            loadMachines();
+        }).catchError(new Operation<PromiseError>() {
+            @Override
+            public void apply(PromiseError arg) throws OperationException {
+                Log.info(getClass(), "Failed to load list commands.");//todo notificationManager should be here
+            }
+        });
     }
 
     @Override
@@ -431,6 +441,14 @@ public class SelectCommandComboBox extends AbstractPerspectiveAction implements 
         machinesListWidget.selectElement(null, null);
         registeredMachineMap.clear();
         workspaceRunning = false;
+    }
+
+    @Override
+    public void register() {
+        eventBus.addHandler(WsAgentStateEvent.TYPE, this);
+        eventBus.addHandler(MachineStateEvent.TYPE, this);
+        eventBus.addHandler(WorkspaceStartedEvent.TYPE, this);
+        eventBus.addHandler(WorkspaceStoppedEvent.TYPE, this);
     }
 
     private class MachineListEntryComparator implements Comparator<Map.Entry<String, Machine>> {

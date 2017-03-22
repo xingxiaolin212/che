@@ -24,11 +24,13 @@ import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.command.CommandProducer;
 import org.eclipse.che.ide.api.component.Component;
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.constraints.Constraints;
 import org.eclipse.che.ide.api.machine.ActiveRuntime;
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
+import org.eclipse.che.ide.util.loging.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,7 +55,7 @@ import static org.eclipse.che.ide.api.constraints.Anchor.AFTER;
  * @see CommandProducer
  */
 @Singleton
-public class CommandProducerActionManager implements MachineStateEvent.Handler, WsAgentStateHandler, Component {
+public class CommandProducerActionManager implements MachineStateEvent.Handler, WsAgentStateHandler, Component, RegistrableComponent {
 
     private final ActionManager                actionManager;
     private final CommandProducerActionFactory commandProducerActionFactory;
@@ -65,6 +67,7 @@ public class CommandProducerActionManager implements MachineStateEvent.Handler, 
     private final Map<Action, DefaultActionGroup>          actionsToActionGroups;
     private final Map<Machine, List<Action>>               actionsByMachines;
     private final Map<CommandProducer, DefaultActionGroup> producersToActionGroups;
+    private final EventBus eventBus;
 
     private DefaultActionGroup commandActionsPopUpGroup;
 
@@ -78,13 +81,17 @@ public class CommandProducerActionManager implements MachineStateEvent.Handler, 
         this.commandProducerActionFactory = commandProducerActionFactory;
         this.appContext = appContext;
         this.resources = resources;
+        this.eventBus = eventBus;
 
         machines = new ArrayList<>();
         commandProducers = new HashSet<>();
         actionsToActionGroups = new HashMap<>();
         actionsByMachines = new HashMap<>();
         producersToActionGroups = new HashMap<>();
+    }
 
+    @Override
+    public void register() {
         eventBus.addHandler(MachineStateEvent.TYPE, this);
         eventBus.addHandler(WsAgentStateEvent.TYPE, this);
     }

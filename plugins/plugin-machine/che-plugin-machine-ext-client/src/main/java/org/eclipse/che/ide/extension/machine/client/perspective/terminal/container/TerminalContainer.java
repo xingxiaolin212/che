@@ -13,12 +13,15 @@ package org.eclipse.che.ide.extension.machine.client.perspective.terminal.contai
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.inject.Inject;
+import com.google.web.bindery.event.shared.EventBus;
 
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.machine.MachineEntity;
 import org.eclipse.che.ide.extension.machine.client.inject.factories.TerminalFactory;
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.extension.machine.client.perspective.terminal.TerminalPresenter;
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.content.TabPresenter;
+import org.eclipse.che.ide.util.loging.Log;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,16 +31,18 @@ import java.util.Map;
  *
  * @author Dmitry Shnurenko
  */
-public class TerminalContainer implements TabPresenter, MachineStateEvent.Handler {
+public class TerminalContainer implements TabPresenter, MachineStateEvent.Handler, RegistrableComponent {
 
     private final TerminalContainerView          view;
     private final TerminalFactory                terminalFactory;
     private final Map<String, TerminalPresenter> terminals;
+    private final EventBus eventBus;
 
     @Inject
-    public TerminalContainer(TerminalContainerView view, TerminalFactory terminalFactory) {
+    public TerminalContainer(TerminalContainerView view, TerminalFactory terminalFactory, EventBus eventBus) {
         this.view = view;
         this.terminalFactory = terminalFactory;
+        this.eventBus = eventBus;
 
         this.terminals = new HashMap<>();
     }
@@ -85,19 +90,28 @@ public class TerminalContainer implements TabPresenter, MachineStateEvent.Handle
 
     @Override
     public void onMachineCreating(MachineStateEvent event) {
+        Log.info(getClass(), "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$C");
     }
 
     /** {@inheritDoc} */
     @Override
     public void onMachineRunning(MachineStateEvent event) {
+        Log.info(getClass(), "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$R");
         //to do nothing
     }
 
     /** {@inheritDoc} */
     @Override
     public void onMachineDestroyed(MachineStateEvent event) {
+        Log.info(getClass(), "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$D");
+        Log.info(getClass(), "NEVER EVER?");//todo MachineDestroyed doesn't work at all seems
         String destroyedMachineId = event.getMachineId();
 
         terminals.remove(destroyedMachineId);
+    }
+
+    @Override
+    public void register() {
+        eventBus.addHandler(MachineStateEvent.TYPE, this);
     }
 }

@@ -24,6 +24,9 @@ import java.util.Map;
  */
 public interface CommandManager {
 
+    /** Loads all commands from server to manager */
+    Promise<List<CommandImpl>> retrieveAllCommands();
+
     /** Returns all commands. */
     List<CommandImpl> getCommands();
 

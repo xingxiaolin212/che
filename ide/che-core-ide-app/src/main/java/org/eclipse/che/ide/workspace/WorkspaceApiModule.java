@@ -12,10 +12,8 @@ package org.eclipse.che.ide.workspace;
 
 import com.google.gwt.inject.client.AbstractGinModule;
 import com.google.gwt.inject.client.assistedinject.GinFactoryModuleBuilder;
-import com.google.gwt.inject.client.multibindings.GinMapBinder;
 import com.google.inject.Singleton;
 
-import org.eclipse.che.ide.api.component.Component;
 import org.eclipse.che.ide.api.workspace.WorkspaceServiceClient;
 import org.eclipse.che.ide.workspace.create.recipewidget.RecipeWidget;
 import org.eclipse.che.ide.workspace.create.recipewidget.RecipeWidgetImpl;
@@ -32,10 +30,6 @@ public class WorkspaceApiModule extends AbstractGinModule {
     @Override
     protected void configure() {
         bind(WorkspaceServiceClient.class).to(WorkspaceServiceClientImpl.class).in(Singleton.class);
-
-        GinMapBinder.newMapBinder(binder(), String.class, Component.class)
-                    .addBinding("WorkspaceComponentProvider")
-                    .toProvider(WorkspaceComponentProvider.class);
 
         install(new GinFactoryModuleBuilder()
                         .implement(RecipeWidget.class, RecipeWidgetImpl.class)

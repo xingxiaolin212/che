@@ -10,9 +10,6 @@
  *******************************************************************************/
 package org.eclipse.che.ide.extension.machine.client.processes;
 
-import com.google.inject.Inject;
-import com.google.inject.assistedinject.Assisted;
-
 import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.ide.api.machine.MachineEntity;
 import org.eclipse.che.ide.ui.tree.TreeNodeElement;
@@ -53,6 +50,7 @@ public class ProcessTreeNode {
     private boolean                                hasSSHAgent;
 
     private boolean                                running;
+    private boolean                                showAddTerminalBtn;
 
     public ProcessTreeNode(ProcessNodeType type,
                            ProcessTreeNode parent,
@@ -164,6 +162,14 @@ public class ProcessTreeNode {
 
     public void setRunning(boolean running) {
         this.running = running;
+    }
+
+    public boolean isShowAddTerminalBtn() {
+        return showAddTerminalBtn;
+    }
+
+    public void setShowAddTerminalBtn(boolean showAddTerminalBtn) {
+        this.showAddTerminalBtn = showAddTerminalBtn;
     }
 
     @Override

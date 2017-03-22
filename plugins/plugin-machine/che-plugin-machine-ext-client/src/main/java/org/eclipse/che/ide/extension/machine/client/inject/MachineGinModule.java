@@ -12,6 +12,7 @@ package org.eclipse.che.ide.extension.machine.client.inject;
 
 import com.google.gwt.inject.client.AbstractGinModule;
 import com.google.gwt.inject.client.assistedinject.GinFactoryModuleBuilder;
+import com.google.gwt.inject.client.multibindings.GinMapBinder;
 import com.google.gwt.inject.client.multibindings.GinMultibinder;
 import com.google.inject.Singleton;
 import com.google.inject.name.Names;
@@ -19,12 +20,18 @@ import com.google.inject.name.Names;
 import org.eclipse.che.api.machine.shared.Constants;
 import org.eclipse.che.ide.api.command.CommandManager;
 import org.eclipse.che.ide.api.command.CommandType;
+import org.eclipse.che.ide.api.component.RegistrableComponent;
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
 import org.eclipse.che.ide.api.machine.MachineEntity;
+import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.ide.api.macro.Macro;
 import org.eclipse.che.ide.api.outputconsole.OutputConsole;
+import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
+import org.eclipse.che.ide.command.CommandProducerActionManager;
+import org.eclipse.che.ide.extension.machine.client.MachineExtension;
 import org.eclipse.che.ide.extension.machine.client.RecipeScriptDownloadServiceClient;
 import org.eclipse.che.ide.extension.machine.client.RecipeScriptDownloadServiceClientImpl;
+import org.eclipse.che.ide.extension.machine.client.actions.SelectCommandComboBox;
 import org.eclipse.che.ide.extension.machine.client.command.CommandManagerImpl;
 import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandType;
 import org.eclipse.che.ide.extension.machine.client.command.edit.EditCommandsView;
@@ -36,12 +43,14 @@ import org.eclipse.che.ide.extension.machine.client.inject.factories.EntityFacto
 import org.eclipse.che.ide.extension.machine.client.inject.factories.TerminalFactory;
 import org.eclipse.che.ide.extension.machine.client.inject.factories.WidgetsFactory;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineItem;
+import org.eclipse.che.ide.extension.machine.client.machine.MachineStatusHandler;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsolePresenter;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.DefaultOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.OutputConsoleView;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.OutputConsoleViewImpl;
+import org.eclipse.che.ide.extension.machine.client.perspective.terminal.container.TerminalContainer;
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.recipe.editor.button.EditorButtonWidget;
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.recipe.editor.button.EditorButtonWidgetImpl;
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.Tab;
@@ -49,6 +58,7 @@ import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.TabI
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.header.TabHeader;
 import org.eclipse.che.ide.extension.machine.client.perspective.widgets.tab.header.TabHeaderImpl;
 import org.eclipse.che.ide.extension.machine.client.processes.actions.ConsoleTreeContextMenuFactory;
+import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelView;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelViewImpl;
 import org.eclipse.che.ide.extension.machine.client.targets.BaseTarget;
@@ -122,5 +132,16 @@ public class MachineGinModule extends AbstractGinModule {
         categoryPageBinder.addBinding().to(DevelopmentCategoryPresenter.class);
 
         install(new GinFactoryModuleBuilder().build(ConsoleTreeContextMenuFactory.class));
+
+        GinMultibinder<WsAgentStateHandler> wsAgentStateHandlerBinder = GinMultibinder.newSetBinder(binder(), WsAgentStateHandler.class);
+        wsAgentStateHandlerBinder.addBinding().to(ProcessesPanelPresenter.class);
+
+        GinMapBinder<String, RegistrableComponent> mapBinder = GinMapBinder.newMapBinder(binder(), String.class, RegistrableComponent.class);
+        mapBinder.addBinding("ProcessPanelPresenter").to(ProcessesPanelPresenter.class);
+        mapBinder.addBinding("TerminalContainer").to(TerminalContainer.class);
+        mapBinder.addBinding("MachineExtension").to(MachineExtension.class);
+        mapBinder.addBinding("SelectCommandComboBox").to(SelectCommandComboBox.class);
+        mapBinder.addBinding("CommandProducerActionManager").to(CommandProducerActionManager.class);
+        mapBinder.addBinding("MachineStatusHandler").to(MachineStatusHandler.class);
     }
 }

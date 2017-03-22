@@ -35,13 +35,15 @@ import org.eclipse.che.ide.extension.machine.client.outputspanel.console.Command
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Implementation of {@link CommandManager}.
@@ -84,29 +86,23 @@ public class CommandManagerImpl implements CommandManager {
 
         commands = new HashMap<>();
         commandChangedListeners = new HashSet<>();
-        retrieveAllCommands();
     }
 
-    private void retrieveAllCommands() {
-        workspaceServiceClient.getCommands(appContext.getWorkspaceId()).then(new Operation<List<CommandDto>>() {
-            @Override
-            public void apply(List<CommandDto> arg) throws OperationException {
-                for (Command command : arg) {
-                    commands.put(command.getName(), new CommandImpl(command));
-                }
-            }
+    public Promise<List<CommandImpl>> retrieveAllCommands() {
+        return workspaceServiceClient.getCommands(appContext.getWorkspaceId()).then((Function<List<CommandDto>, List<CommandImpl>>)arg -> {
+            List<CommandImpl> commandsImpls = arg.stream().map(CommandImpl::new).collect(Collectors.toList());
+
+            Map<String, CommandImpl> commandMap = commandsImpls.stream().collect(toMap(Command::getName, command -> command));
+            commands.putAll(commandMap);
+
+            return commandsImpls;
         });
     }
 
     @Override
     public List<CommandImpl> getCommands() {
         // return copy of the commands in order to prevent it modification directly
-        List<CommandImpl> list = new ArrayList<>(commands.size());
-        for (CommandImpl command : commands.values()) {
-            list.add(new CommandImpl(command));
-        }
-
-        return list;
+        return commands.values().stream().collect(Collectors.toList());
     }
 
     @Override
