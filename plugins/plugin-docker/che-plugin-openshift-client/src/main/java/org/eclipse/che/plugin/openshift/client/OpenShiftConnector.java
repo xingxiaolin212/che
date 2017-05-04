@@ -193,6 +193,7 @@ public class OpenShiftConnector extends DockerConnector {
     private final String          cheWorkspaceMemoryLimit;
     private final String          cheWorkspaceMemoryRequest;
     private final boolean         secureRoutes;
+    private final boolean         createWorkspaceDirs;
     private final OpenShiftPvcHelper openShiftPvcHelper;
 
     @Inject
@@ -212,7 +213,8 @@ public class OpenShiftConnector extends DockerConnector {
                               @Named("che.workspace.projects.storage") String cheWorkspaceProjectsStorage,
                               @Nullable @Named("che.openshift.workspace.memory.request") String cheWorkspaceMemoryRequest,
                               @Nullable @Named("che.openshift.workspace.memory.override") String cheWorkspaceMemoryLimit,
-                              @Named("che.openshift.secure.routes") boolean secureRoutes) {
+                              @Named("che.openshift.secure.routes") boolean secureRoutes,
+                              @Named("che.openshift.precreate.workspace.dirs") boolean createWorkspaceDirs) {
 
         super(connectorConfiguration, connectionFactory, authResolver, dockerApiVersionPathPrefixProvider);
         this.cheServerExternalAddress = cheServerExternalAddress;
@@ -226,6 +228,7 @@ public class OpenShiftConnector extends DockerConnector {
         this.cheWorkspaceMemoryRequest = cheWorkspaceMemoryRequest;
         this.cheWorkspaceMemoryLimit = cheWorkspaceMemoryLimit;
         this.secureRoutes = secureRoutes;
+        this.createWorkspaceDirs = createWorkspaceDirs;
         this.openShiftPvcHelper = openShiftPvcHelper;
         eventService.subscribe(new EventSubscriber<ServerIdleEvent>() {
 
@@ -1142,7 +1145,9 @@ public class OpenShiftConnector extends DockerConnector {
 
         LOG.info("Adding container {} to OpenShift deployment {}", sanitizedContainerName, deploymentName);
 
-        createWorkspaceDir(volumes);
+        if (createWorkspaceDirs) {
+            createWorkspaceDir(volumes);
+        }
 
         Container container = new ContainerBuilder()
                                     .withName(sanitizedContainerName)
