@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.maven.server.core.project;
 
+import org.eclipse.che.api.project.server.EditorWorkingCopyManager;
 import org.eclipse.che.commons.lang.PathUtil;
 import org.eclipse.che.maven.data.MavenArtifact;
 import org.eclipse.che.maven.data.MavenConstants;
@@ -46,13 +47,21 @@ import java.util.stream.Collectors;
  */
 public class MavenProject {
 
-    private final IProject project;
-    private final IWorkspace workspace;
+    private final IProject                 project;
+    private final IWorkspace               workspace;
+    private final EditorWorkingCopyManager workingCopyManager;
     private volatile Info info = new Info();
 
     public MavenProject(IProject project, IWorkspace workspace) {
         this.project = project;
         this.workspace = workspace;
+        this.workingCopyManager = null;
+    }
+
+    public MavenProject(IProject project, IWorkspace workspace, EditorWorkingCopyManager workingCopyManager) {
+        this.project = project;
+        this.workspace = workspace;
+        this.workingCopyManager = workingCopyManager;
     }
 
 
@@ -129,15 +138,15 @@ public class MavenProject {
         result.addAll(info.problems);
         result.addAll(info.modulesNameToPath.entrySet().stream().filter(entry -> !project.getFolder(entry.getKey()).exists())
                 .map(entry -> new MavenProjectProblem(getPomPath(),
-                        "Can't find module: " + entry.getKey(),
-                        MavenProblemType.DEPENDENCY))
+                                                      "Can't find module: " + entry.getKey(),
+                                                      MavenProblemType.DEPENDENCY))
                 .collect(Collectors.toList()));
 
 
         result.addAll(getDependencies().stream().filter(artifact -> !artifact.isResolved())
                 .map(artifact -> new MavenProjectProblem(getPomPath(),
-                        "Can't find dependency: " + artifact.getDisplayString(),
-                        MavenProblemType.DEPENDENCY))
+                                                         "Can't find dependency: " + artifact.getDisplayString(),
+                                                         MavenProblemType.DEPENDENCY))
                 .collect(Collectors.toList()));
 
         //TODO add unresolved plugins and extensions
@@ -268,7 +277,14 @@ public class MavenProject {
             return null;
         }
 
-        return file.getLocation().toFile();
+
+
+        File pomFile = null;
+        if (workingCopyManager != null) {
+            pomFile = workingCopyManager.getWorkingCopyFile(file.getFullPath().toOSString());
+        }
+
+        return pomFile != null ? pomFile : file.getLocation().toFile();
     }
 
     /**

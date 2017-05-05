@@ -80,7 +80,7 @@ public class MavenProjectManagerTest {
     @BeforeMethod
     public void setUp() throws Exception {
         MavenWrapperManager wrapperManager = new MavenWrapperManager(manager);
-        projectManager = new MavenProjectManager(wrapperManager, manager, new MavenTerminalImpl(),
+        projectManager = new MavenProjectManager(wrapperManager, manager, null, new MavenTerminalImpl(),
                                                  new MavenServerManagerTest.MyMavenServerProgressNotifier(), workspaceProvider);
         when(workspaceProvider.get()).thenReturn(workspace);
         when(workspace.getRoot()).thenReturn(workspaceRoot);

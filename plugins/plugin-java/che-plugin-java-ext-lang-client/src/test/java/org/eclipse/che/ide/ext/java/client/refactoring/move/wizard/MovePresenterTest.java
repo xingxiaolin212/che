@@ -20,6 +20,7 @@ import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.editor.EditorAgent;
+import org.eclipse.che.ide.api.event.ng.ClientServerEventService;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.resources.Container;
 import org.eclipse.che.ide.api.resources.File;
@@ -111,7 +112,7 @@ public class MovePresenterTest {
     @Mock
     private Container    srcFolder;
     @Mock
-    private Project relatedProject;
+    private Project      relatedProject;
 
     @Mock
     private RefactoringStatus             refactoringStatus;
@@ -145,6 +146,8 @@ public class MovePresenterTest {
     private PromiseError                  promiseError;
     @Mock
     private EventBus                      eventBus;
+    @Mock
+    private ClientServerEventService      clientServerEventService;
 
     @Captor
     private ArgumentCaptor<Operation<String>>                             sessionOperation;
@@ -195,7 +198,8 @@ public class MovePresenterTest {
                                       dtoFactory,
                                       locale,
                                       notificationManager,
-                                      eventBus);
+                                      eventBus,
+                                      clientServerEventService);
     }
 
     @Test

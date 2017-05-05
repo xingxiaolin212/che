@@ -11,6 +11,7 @@
 package org.eclipse.che.ide.ext.java.client.refactoring;
 
 import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.user.client.Timer;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
@@ -21,21 +22,28 @@ import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.editor.EditorAgent;
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
 import org.eclipse.che.ide.api.event.FileContentUpdateEvent;
+import org.eclipse.che.ide.api.event.ng.ClientServerEventService;
 import org.eclipse.che.ide.api.event.ng.DeletedFilesController;
 import org.eclipse.che.ide.api.parts.PartPresenter;
 import org.eclipse.che.ide.api.parts.WorkspaceAgent;
 import org.eclipse.che.ide.api.resources.ExternalResourceDelta;
+import org.eclipse.che.ide.api.resources.ModificationTracker;
 import org.eclipse.che.ide.api.resources.ResourceDelta;
+import org.eclipse.che.ide.api.resources.VirtualFile;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.ChangeInfo;
+import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringResult;
 import org.eclipse.che.ide.part.editor.multipart.EditorMultiPartStackPresenter;
 import org.eclipse.che.ide.resource.Path;
 import org.eclipse.che.ide.resources.reveal.RevealResourceEvent;
+import org.eclipse.che.ide.util.loging.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingMovedEvent;
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingResumedEvent;
 import static org.eclipse.che.ide.api.resources.ResourceDelta.ADDED;
 import static org.eclipse.che.ide.api.resources.ResourceDelta.MOVED_FROM;
 import static org.eclipse.che.ide.api.resources.ResourceDelta.MOVED_TO;
@@ -56,6 +64,7 @@ public class RefactoringUpdater {
     private final DeletedFilesController        deletedFilesController;
     private final EventBus                      eventBus;
     private final EditorAgent                   editorAgent;
+    private final ClientServerEventService      clientServerEventService;
 
     @Inject
     public RefactoringUpdater(AppContext appContext,
@@ -63,13 +72,15 @@ public class RefactoringUpdater {
                               WorkspaceAgent workspaceAgent,
                               DeletedFilesController deletedFilesController,
                               EventBus eventBus,
-                              EditorAgent editorAgent) {
+                              EditorAgent editorAgent,
+                              ClientServerEventService clientServerEventService) {
         this.appContext = appContext;
         this.editorMultiPartStack = editorMultiPartStack;
         this.workspaceAgent = workspaceAgent;
         this.deletedFilesController = deletedFilesController;
         this.eventBus = eventBus;
         this.editorAgent = editorAgent;
+        this.clientServerEventService = clientServerEventService;
     }
 
     /**
@@ -81,6 +92,19 @@ public class RefactoringUpdater {
      *         applied changes
      */
     public void updateAfterRefactoring(List<ChangeInfo> changes) {
+        updateAfterRefactoring(changes, () -> {
+        });
+    }
+
+    /**
+     * Iterates over each refactoring change and according to change type performs specific update operation.
+     * i.e. for {@code ChangeName#UPDATE} updates only opened editors, for {@code ChangeName#MOVE or ChangeName#RENAME_COMPILATION_UNIT}
+     * updates only new paths and opened editors, for {@code ChangeName#RENAME_PACKAGE} reloads package structure and restore expansion.
+     *
+     * @param changes
+     *         applied changes
+     */
+    public void updateAfterRefactoring(List<ChangeInfo> changes, RefactoringUpdateCallback callback) {
         if (changes == null || changes.isEmpty()) {
             return;
         }
@@ -134,14 +158,17 @@ public class RefactoringUpdater {
                     for (ResourceDelta delta : appliedDeltas) {
                         eventBus.fireEvent(new RevealResourceEvent(delta.getToPath()));
                     }
+
                     for (EditorPartPresenter editorPartPresenter : editorAgent.getOpenedEditors()) {
-                        final String path = editorPartPresenter.getEditorInput().getFile().getLocation().toString();
+                        VirtualFile virtualFile = editorPartPresenter.getEditorInput().getFile();
+                        String path = virtualFile.getLocation().toString();
                         if (pathChanged.contains(path)) {
-                            eventBus.fireEvent(
-                                    new FileContentUpdateEvent(editorPartPresenter.getEditorInput().getFile().getLocation().toString()));
+                            updateFileContent(virtualFile);
                         }
+
                     }
                     setActiveEditor();
+                    callback.onRefactoringUpdateCompleted();
                 }
             });
         } else {
@@ -149,19 +176,54 @@ public class RefactoringUpdater {
                 @Override
                 public void execute() {
                     for (EditorPartPresenter editorPartPresenter : editorAgent.getOpenedEditors()) {
-                        eventBus.fireEvent(
-                                new FileContentUpdateEvent(editorPartPresenter.getEditorInput().getFile().getLocation().toString()));
+                        Log.error(getClass(), "//////////////////////////////////////////////////////// 222");
+                        updateFileContent(editorPartPresenter.getEditorInput().getFile());
                     }
                     setActiveEditor();
+                    callback.onRefactoringUpdateCompleted();
                 }
             });
         }
+    }
+
+    private void updateFileContent(VirtualFile virtualFile) {
+        String path = virtualFile.getLocation().toString();
+
+        if (virtualFile instanceof ModificationTracker) {
+            String modificationStamp = ((ModificationTracker)virtualFile).getModificationStamp();
+            eventBus.fireEvent(new FileContentUpdateEvent(path, modificationStamp));
+            return;
+        }
+
+        eventBus.fireEvent(new FileContentUpdateEvent(path));
+    }
+
+    public void handleMovingFiles(RefactoringResult refactoringResult) {
+        Log.error(getClass(), "************************* handleMovingFiles ");
+        for (ChangeInfo change : refactoringResult.getChanges()) {
+            String path = change.getPath();
+            String oldPath = change.getOldPath();
+
+            if (!isNullOrEmpty(oldPath)) {
+                Log.error(getClass(), "************************* sendFileTrackingMoveEvent ");
+                clientServerEventService.sendFileTrackingMoveEvent(path, oldPath).then(success -> {
+                    Log.error(getClass(), "************************* sendFileTrackingMoveEvent success");
+                    eventBus.fireEvent(newFileTrackingMovedEvent(path, oldPath));
+                });
+            }
+        }
+        Log.error(getClass(), "************************* sendFileTrackingResumeEvent");
+        clientServerEventService.sendFileTrackingResumeEvent().then(success -> {
+            Log.error(getClass(), "************************* sendFileTrackingResumeEvent success");
+            eventBus.fireEvent(newFileTrackingResumedEvent());
+        });
     }
 
     private void registerRemovedFile(ChangeInfo change) {
         for (EditorPartPresenter editorPartPresenter : editorAgent.getOpenedEditors()) {
             String editorPath = editorPartPresenter.getEditorInput().getFile().getLocation().toString();
             if (editorPath.equals(change.getOldPath())) {
+                Log.error(getClass(), "//////////////////////////////////////////////////////// deletedFilesController.add " + editorPath + " //// " + change.getOldPath());
                 deletedFilesController.add(change.getOldPath());
                 return;
             }
@@ -183,5 +245,9 @@ public class RefactoringUpdater {
         if (activePart != null) {
             workspaceAgent.setActivePart(activePart);
         }
+    }
+
+    public interface RefactoringUpdateCallback {
+        void onRefactoringUpdateCompleted();
     }
 }
