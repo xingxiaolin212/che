@@ -220,6 +220,7 @@ public class JarFileNode extends SyntheticNode<JarEntry> implements VirtualFile,
             case CLOSE: {
                 if (resourceChangeHandlerRegistration != null) {
                     resourceChangeHandlerRegistration.removeHandler();
+                    resourceChangeHandlerRegistration = null;
                 }
 
                 break;
@@ -232,7 +233,7 @@ public class JarFileNode extends SyntheticNode<JarEntry> implements VirtualFile,
         ResourceDelta delta = event.getDelta();
         Path resourceLocation = delta.getResource().getLocation();
 
-        if (project.equals(resourceLocation) && REMOVED == delta.getKind()) {
+        if (REMOVED == delta.getKind() && project.equals(resourceLocation)) {
             EditorPartPresenter editorPart = editorAgent.getOpenedEditor(getLocation());
             editorAgent.closeEditor(editorPart);
 
@@ -243,10 +244,12 @@ public class JarFileNode extends SyntheticNode<JarEntry> implements VirtualFile,
     private void removeHandlers() {
         if (fileEventHandlerRegistration != null) {
             fileEventHandlerRegistration.removeHandler();
+            fileEventHandlerRegistration = null;
         }
 
         if (resourceChangeHandlerRegistration != null) {
             resourceChangeHandlerRegistration.removeHandler();
+            resourceChangeHandlerRegistration = null;
         }
     }
 }
