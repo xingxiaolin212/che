@@ -20,8 +20,7 @@ import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.OperationType.S
 import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.OperationType.SUSPENDED;
 
 /**
- * Consumed by {@link ClientServerEventService} and sent to server side so we could manage
- * server side VFS file watching from client.
+ * Notify client side about file tracking operation calls which were sent to server side.
  *
  * @author Dmitry Kuleshov
  */
@@ -53,7 +52,7 @@ public class FileTrackingEvent extends GwtEvent<FileTrackingEvent.FileTrackingEv
         return new FileTrackingEvent(path, null, STARTED);
     }
 
-    public static FileTrackingEvent newFileTrackingStopedEvent(String path) {
+    public static FileTrackingEvent newFileTrackingStoppedEvent(String path) {
         return new FileTrackingEvent(path, null, STOPPED);
     }
 

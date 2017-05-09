@@ -15,6 +15,8 @@ import com.google.common.hash.Hashing;
 import org.eclipse.che.api.core.ForbiddenException;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.jsonrpc.RequestTransmitter;
+import org.eclipse.che.api.core.notification.EventService;
+import org.eclipse.che.api.core.notification.EventSubscriber;
 import org.eclipse.che.api.project.shared.dto.event.FileStateUpdateDto;
 import org.eclipse.che.api.project.shared.dto.event.FileTrackingOperationDto;
 import org.eclipse.che.api.project.shared.dto.event.FileTrackingOperationDto.Type;
@@ -25,6 +27,7 @@ import org.eclipse.che.api.vfs.watcher.FileWatcherManager;
 import org.eclipse.che.api.vfs.watcher.FileWatcherUtils;
 import org.slf4j.Logger;
 
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -69,24 +72,36 @@ public class EditorFileTracker {
     private final Map<String, String>  hashRegistry    = new HashMap<>();
     private final Map<String, Integer> watchIdRegistry = new HashMap<>();
 
-    private final RequestTransmitter        transmitter;
-    private       File                      root;
-    private final FileWatcherManager fileWatcherManager;
-    private final VirtualFileSystemProvider vfsProvider;
+    private final RequestTransmitter                          transmitter;
+    private       File                                        root;
+    private final FileWatcherManager                          fileWatcherManager;
+    private final VirtualFileSystemProvider                   vfsProvider;
+    private final EventService                                eventService;
+    private final EventSubscriber<FileTrackingOperationEvent> fileOperationEventSubscriber;
 
 
     @Inject
     public EditorFileTracker(@Named("che.user.workspaces.storage") File root,
                              FileWatcherManager fileWatcherManager,
                              RequestTransmitter transmitter,
-                             VirtualFileSystemProvider vfsProvider) {
+                             VirtualFileSystemProvider vfsProvider,
+                             EventService eventService) {
         this.root = root;
         this.fileWatcherManager = fileWatcherManager;
         this.transmitter = transmitter;
         this.vfsProvider = vfsProvider;
+        this.eventService = eventService;
+
+        fileOperationEventSubscriber = new EventSubscriber<FileTrackingOperationEvent>() {
+            @Override
+            public void onEvent(FileTrackingOperationEvent event) {
+                onFileTrackingOperationReceived(event.getEndpointId(), event.getFileTrackingOperation());
+            }
+        };
+        eventService.subscribe(fileOperationEventSubscriber);
     }
 
-    void onFileTrackingOperationReceived(String endpointId, FileTrackingOperationDto operation) {
+    private void onFileTrackingOperationReceived(String endpointId, FileTrackingOperationDto operation) {
         Type type = operation.getType();
         String path = operation.getPath();
         String oldPath = operation.getOldPath();
@@ -197,5 +212,10 @@ public class EditorFileTracker {
             LOG.error("Error trying to read {} file and broadcast it", path, e);
         }
         return null;
+    }
+
+    @PreDestroy
+    private void unsubscribe() {
+        eventService.unsubscribe(fileOperationEventSubscriber);
     }
 }

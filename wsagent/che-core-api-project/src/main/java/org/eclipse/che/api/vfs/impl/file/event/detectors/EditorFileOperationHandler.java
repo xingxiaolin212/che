@@ -18,20 +18,16 @@ import org.eclipse.che.api.project.shared.dto.event.FileTrackingOperationDto;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/**
- * @author Roman Nikitenko
- */
+/** Receive a file tracking operation call from client and notify server side about it by {@code FileTrackingOperationEvent}. */
 @Singleton
 public class EditorFileOperationHandler {
     private static final String INCOMING_METHOD = "track:editor-file";
 
     private final EventService      eventService;
-    private final EditorFileTracker editorFileTracker;
 
     @Inject
-    public EditorFileOperationHandler(EventService eventService, EditorFileTracker editorFileTracker) {
+    public EditorFileOperationHandler(EventService eventService) {
         this.eventService = eventService;
-        this.editorFileTracker = editorFileTracker;
     }
 
     @Inject
@@ -45,7 +41,6 @@ public class EditorFileOperationHandler {
 
     private Void handleFileTrackingOperation(String endpointId, FileTrackingOperationDto operation) {
         try {
-            editorFileTracker.onFileTrackingOperationReceived(endpointId, operation);
             eventService.publish(new FileTrackingOperationEvent(endpointId, operation));
             return null;
         } catch (Exception e) {

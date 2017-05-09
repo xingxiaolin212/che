@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingStartedEvent;
-import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingStopedEvent;
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingStoppedEvent;
 
 /**
  * File open/close event listener aimed to wrap {@link FileEvent} into {@link FileTrackingEvent}
@@ -81,7 +81,7 @@ public class FileOpenCloseEventListener {
                 }
 
                 clientServerEventService.sendFileTrackingStopEvent(path.toString()).then(success -> {
-                    eventBus.fireEvent(newFileTrackingStopedEvent(path.toString()));
+                    eventBus.fireEvent(newFileTrackingStoppedEvent(path.toString()));
                 });
 
             }

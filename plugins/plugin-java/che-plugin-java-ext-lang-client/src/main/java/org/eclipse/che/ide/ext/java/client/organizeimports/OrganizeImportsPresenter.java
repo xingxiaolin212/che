@@ -17,6 +17,7 @@ import com.google.web.bindery.event.shared.EventBus;
 
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
+import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
 import org.eclipse.che.ide.api.editor.document.Document;
@@ -112,33 +113,40 @@ public class OrganizeImportsPresenter implements OrganizeImportsView.ActionDeleg
             }
 
             final String fqn = JavaUtil.resolveFQN((Container)srcFolder.get(), (Resource)file);
-
-            eventBus.fireEvent(newFileTrackingSuspendedEvent());
-            javaCodeAssistClient.organizeImports(project.get().getLocation().toString(), fqn)
-                                .then(new Operation<OrganizeImportResult>() {
-                                    @Override
-                                    public void apply(OrganizeImportResult result) throws OperationException {
-                                        if (result.getConflicts() != null && !result.getConflicts().isEmpty()) {
-                                            show(result.getConflicts());
-                                        } else {
-                                            applyChanges(document, result.getChanges());
-                                        }
-
-                                        clientServerEventService.sendFileTrackingResumeEvent().then(arg -> {
-                                            eventBus.fireEvent(newFileTrackingResumedEvent());
-                                        });
-                                    }
-                                })
-                                .catchError(new Operation<PromiseError>() {
-                                    @Override
-                                    public void apply(PromiseError arg) throws OperationException {
-                                        String title = locale.failedToProcessOrganizeImports();
-                                        String message = arg.getMessage();
-                                        notificationManager.notify(title, message, FAIL, FLOAT_MODE);
-                                        eventBus.fireEvent(newFileTrackingResumedEvent());
-                                    }
-                                });
+            sendFileTrackingSuspendEvent().then(doOrganizeImports(fqn, project));
         }
+    }
+
+    private Promise<Void> sendFileTrackingSuspendEvent() {
+        return clientServerEventService.sendFileTrackingSuspendEvent().then(arg -> {
+            eventBus.fireEvent(newFileTrackingSuspendedEvent());
+        });
+    }
+
+    private Promise<Void> sendFileTrackingResumeEvent() {
+        return clientServerEventService.sendFileTrackingResumeEvent().then(arg -> {
+            eventBus.fireEvent(newFileTrackingResumedEvent());
+        });
+    }
+
+    private Promise<OrganizeImportResult> doOrganizeImports(String fqn, Optional<Project> project) {
+        return javaCodeAssistClient.organizeImports(project.get().getLocation().toString(), fqn)
+                                   .then(result -> {
+                                       if (result.getConflicts() != null && !result.getConflicts().isEmpty()) {
+                                           show(result.getConflicts());
+                                       } else {
+                                           applyChanges(document, result.getChanges());
+                                       }
+
+                                       sendFileTrackingResumeEvent();
+                                   })
+                                   .catchError(error -> {
+                                       String title = locale.failedToProcessOrganizeImports();
+                                       String message = error.getMessage();
+                                       notificationManager.notify(title, message, FAIL, FLOAT_MODE);
+
+                                       sendFileTrackingResumeEvent();
+                                   });
     }
 
     /** {@inheritDoc} */

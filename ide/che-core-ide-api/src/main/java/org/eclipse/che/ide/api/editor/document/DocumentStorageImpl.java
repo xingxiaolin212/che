@@ -72,7 +72,6 @@ public class DocumentStorageImpl implements DocumentStorage {
                              final boolean overwrite, @NotNull final AsyncCallback<EditorInput> callback) {
         final VirtualFile file = editorInput.getFile();
 
-        Log.error(getClass(), "+++++++++++++++++++++ SAVE ");
         file.updateContent(document.getContents()).then(new Operation<Void>() {
             @Override
             public void apply(Void arg) throws OperationException {

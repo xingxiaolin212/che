@@ -182,7 +182,10 @@ public class JavaRefactoringRename implements FileEventHandler {
         createRenamePromise.then(new Operation<RenameRefactoringSession>() {
             @Override
             public void apply(RenameRefactoringSession session) throws OperationException {
-                activateLinkedModeIntoEditor(session, textEditor.getDocument());
+                clientServerEventService.sendFileTrackingSuspendEvent().then(success -> {
+                    eventBus.fireEvent(newFileTrackingSuspendedEvent());
+                    activateLinkedModeIntoEditor(session, textEditor.getDocument());
+                });
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
@@ -240,11 +243,7 @@ public class JavaRefactoringRename implements FileEventHandler {
                     if (successful) {
                         isSuccessful = true;
                         newName = document.getContentRange(start, end - start);
-                        Log.error(getClass(), "///***/// before suspend !!!!");
-                        clientServerEventService.sendFileTrackingSuspendEvent().then(success -> {
-                            eventBus.fireEvent(newFileTrackingSuspendedEvent());
-                            performRename(session);
-                        });
+                        performRename(session);
                     }
                 } finally {
                     mode.removeListener(this);

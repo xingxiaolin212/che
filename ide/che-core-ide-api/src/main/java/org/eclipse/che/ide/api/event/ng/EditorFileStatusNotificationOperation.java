@@ -86,13 +86,11 @@ public class EditorFileStatusNotificationOperation implements JsonRpcRequestBiOp
             case MODIFIED: {
                 Log.debug(getClass(), "Received updated file event status: " + stringPath);
 
-                Log.error(getClass(), "EditorFileStatusNotificationOperation MODIFIED ");
                 eventBus.fireEvent(new FileContentUpdateEvent(stringPath, params.getHashCode()));
 
                 break;
             }
             case DELETED: {
-                Log.error(getClass(), "EditorFileStatusNotificationOperation DELETED ");
                 Log.debug(getClass(), "Received removed file event status: " + stringPath);
 
                 final Path path = Path.valueOf(stringPath);

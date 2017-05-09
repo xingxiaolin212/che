@@ -23,6 +23,7 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.editor.EditorAgent;
 import org.eclipse.che.ide.api.editor.EditorInput;
+import org.eclipse.che.ide.api.event.ng.ClientServerEventService;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.api.resources.Container;
@@ -110,6 +111,8 @@ public class RenamePresenterTest {
     private RefactoringServiceClient           refactorService;
     @Mock
     private LoaderFactory                      loaderFactory;
+    @Mock
+    private ClientServerEventService           clientServerEventService;
 
     @Mock
     private TextEditor               activeEditor;
@@ -203,18 +206,19 @@ public class RenamePresenterTest {
 
         when(changeCreationResult.getStatus()).thenReturn(refactoringStatus);
 
-//        renamePresenter = new RenamePresenter(view,
-//                                              similarNamesConfigurationPresenter,
-//                                              locale,
-//                                              editorAgent,
-//                                              refactoringUpdater,
-//                                              appContext,
-//                                              notificationManager,
-//                                              previewPresenter,
-//                                              refactorService,
-//                                              dtoFactory,
-//                                              dialogFactory,
-//                                              eventBus);
+        renamePresenter = new RenamePresenter(view,
+                                              similarNamesConfigurationPresenter,
+                                              locale,
+                                              editorAgent,
+                                              refactoringUpdater,
+                                              appContext,
+                                              notificationManager,
+                                              previewPresenter,
+                                              refactorService,
+                                              clientServerEventService,
+                                              dtoFactory,
+                                              dialogFactory,
+                                              eventBus);
     }
 
     @Test

@@ -14,7 +14,6 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
-import org.eclipse.che.ide.FontAwesome;
 import org.eclipse.che.ide.Resources;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.action.ProjectAction;
@@ -36,8 +35,6 @@ public class SaveAllAction extends ProjectAction {
     public SaveAllAction(EditorAgent editorAgent, Resources resources) {
         super("Save All", "Save all changes for project", resources.save());
         this.editorAgent = editorAgent;
-
-//        FontAwesome
     }
 
     /** {@inheritDoc} */

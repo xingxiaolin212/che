@@ -12,8 +12,6 @@ package org.eclipse.che.ide.api.event;
 
 import com.google.gwt.event.shared.GwtEvent;
 
-import org.eclipse.che.ide.util.loging.Log;
-
 /**
  * Event that notifies of file content changes.
  */
@@ -37,12 +35,10 @@ public class FileContentUpdateEvent extends GwtEvent<FileContentUpdateHandler> {
      * @param filePath the path of the file that changed
      */
     public FileContentUpdateEvent(final String filePath) {
-        Log.error(getClass(), "99999999999999999999999999999");
         this.filePath = filePath;
     }
 
     public FileContentUpdateEvent(final String filePath, final String contentStamp) {
-        Log.error(getClass(), "777777777777777777777777777777777");
         this.filePath = filePath;
         this.modificationStamp = contentStamp;
     }
