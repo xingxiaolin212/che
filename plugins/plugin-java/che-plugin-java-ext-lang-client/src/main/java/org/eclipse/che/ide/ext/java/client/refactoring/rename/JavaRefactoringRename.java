@@ -266,7 +266,8 @@ public class JavaRefactoringRename implements FileEventHandler {
                 switch (result.getSeverity()) {
                     case OK:
                     case INFO:
-                        refactoringUpdater.updateAfterRefactoring(result.getChanges(), () -> {
+                        List<ChangeInfo> changes = result.getChanges();
+                        refactoringUpdater.updateAfterRefactoring(changes).then(arg -> {
                             final VirtualFile file = textEditor.getDocument().getFile();
 
                             if (file instanceof Resource) {
@@ -276,7 +277,7 @@ public class JavaRefactoringRename implements FileEventHandler {
                             }
 
                             enableAutoSave();
-                            refactoringUpdater.handleMovingFiles(result);
+                            refactoringUpdater.handleMovingFiles(changes).then(sendFileTrackingResumeEvent());
                         });
 
                         break;
@@ -307,6 +308,15 @@ public class JavaRefactoringRename implements FileEventHandler {
                 notificationManager.notify(locale.failedToRename(), arg.getMessage(), FAIL, FLOAT_MODE);
             }
         });
+    }
+
+    private Promise<Void> sendFileTrackingResumeEvent() {
+        return clientServerEventService.sendFileTrackingResumeEvent()
+                                       .then(success -> {
+                                           Log.error(getClass(),
+                                                     "************************* sendFileTrackingResumeEvent success");
+                                           eventBus.fireEvent(newFileTrackingResumedEvent());
+                                       });
     }
 
     private void enableAutoSave() {

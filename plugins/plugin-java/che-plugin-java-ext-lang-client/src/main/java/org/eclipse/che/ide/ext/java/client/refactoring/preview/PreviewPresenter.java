@@ -15,6 +15,8 @@ import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
 
+import org.eclipse.che.api.promises.client.Function;
+import org.eclipse.che.api.promises.client.FunctionException;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.Promise;
@@ -29,11 +31,16 @@ import org.eclipse.che.ide.ext.java.client.refactoring.move.wizard.MovePresenter
 import org.eclipse.che.ide.ext.java.client.refactoring.rename.wizard.RenamePresenter;
 import org.eclipse.che.ide.ext.java.client.refactoring.service.RefactoringServiceClient;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.ChangeEnabledState;
+import org.eclipse.che.ide.ext.java.shared.dto.refactoring.ChangeInfo;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.ChangePreview;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringChange;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringPreview;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringSession;
+import org.eclipse.che.ide.util.loging.Log;
 
+import java.util.List;
+
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingResumedEvent;
 import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingSuspendedEvent;
 import static org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringStatus.OK;
 
@@ -127,16 +134,27 @@ public class PreviewPresenter implements PreviewView.ActionDelegate {
 
     private void applyRefactoring() {
         refactoringService.applyRefactoring(session).then(refactoringResult -> {
+            List<ChangeInfo> changes = refactoringResult.getChanges();
             if (refactoringResult.getSeverity() == OK) {
                 view.hide();
-                refactoringUpdater.updateAfterRefactoring(refactoringResult.getChanges(), () -> {
-                    refactoringUpdater.handleMovingFiles(refactoringResult);
-                });
+                refactoringUpdater.updateAfterRefactoring(changes)
+                                  .then(refactoringUpdater.handleMovingFiles(changes)
+                                                          .then(sendFileTrackingResumeEvent()));
             } else {
                 view.showErrorMessage(refactoringResult);
-                refactoringUpdater.handleMovingFiles(refactoringResult);
+                refactoringUpdater.handleMovingFiles(changes)
+                                  .then(sendFileTrackingResumeEvent());
             }
         });
+    }
+
+    private Promise<Void> sendFileTrackingResumeEvent() {
+        return clientServerEventService.sendFileTrackingResumeEvent()
+                                       .then(success -> {
+                                           Log.error(getClass(),
+                                                     "************************* sendFileTrackingResumeEvent success");
+                                           eventBus.fireEvent(newFileTrackingResumedEvent());
+                                       });
     }
 
     /** {@inheritDoc} */

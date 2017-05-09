@@ -19,6 +19,7 @@ import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.ide.api.editor.EditorInput;
 import org.eclipse.che.ide.api.editor.document.Document;
 import org.eclipse.che.ide.api.editor.texteditor.TextEditor;
+import org.eclipse.che.ide.api.event.ng.ClientServerEventService;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.resources.Container;
 import org.eclipse.che.ide.api.resources.File;
@@ -70,6 +71,8 @@ public class OrganizeImportsPresenterTest {
     private NotificationManager      notificationManager;
     @Mock
     private EventBus                 eventBus;
+    @Mock
+    private ClientServerEventService clientServerEventService;
 
     private OrganizeImportsPresenter presenter;
     @Mock
@@ -130,7 +133,8 @@ public class OrganizeImportsPresenterTest {
                                                  dtoFactory,
                                                  locale,
                                                  notificationManager,
-                                                 eventBus);
+                                                 eventBus,
+                                                 clientServerEventService);
 
         prepareConflicts();
 

@@ -51,6 +51,7 @@ import org.eclipse.che.ide.util.loging.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingMovedEvent;
@@ -251,21 +252,36 @@ public class MovePresenter implements MoveView.ActionDelegate {
 
     private void applyRefactoring(RefactoringSession session) {
         refactorService.applyRefactoring(session).then(refactoringResult -> {
+            List<ChangeInfo> changes = refactoringResult.getChanges();
             if (refactoringResult.getSeverity() == OK) {
                 view.hide();
-                refactoringUpdater.updateAfterRefactoring(refactoringResult.getChanges(), () -> {
-                    final Resource[] resources = refactorInfo.getResources();
+                refactoringUpdater.updateAfterRefactoring(changes).then(arg -> {
+                    Project project = null;
+                    Resource[] resources = refactorInfo.getResources();
                     if (resources != null && resources.length == 1) {
-                        refactorService.reindexProject(resources[0].getRelatedProject().get().getLocation().toString());
+                        project = resources[0].getProject();
                     }
 
-                    refactoringUpdater.handleMovingFiles(refactoringResult);
+                    if (project != null) {
+                        refactorService.reindexProject(project.getPath());
+                    }
+
+                    refactoringUpdater.handleMovingFiles(changes).then(sendFileTrackingResumeEvent());
                 });
             } else {
                 view.showErrorMessage(refactoringResult);
-                refactoringUpdater.handleMovingFiles(refactoringResult);
+                refactoringUpdater.handleMovingFiles(changes).then(sendFileTrackingResumeEvent());
             }
         });
+    }
+
+    private Promise<Void> sendFileTrackingResumeEvent() {
+        return clientServerEventService.sendFileTrackingResumeEvent()
+                                       .then(success -> {
+                                           Log.error(getClass(),
+                                                     "************************* sendFileTrackingResumeEvent success");
+                                           eventBus.fireEvent(newFileTrackingResumedEvent());
+                                       });
     }
 
     /** {@inheritDoc} */

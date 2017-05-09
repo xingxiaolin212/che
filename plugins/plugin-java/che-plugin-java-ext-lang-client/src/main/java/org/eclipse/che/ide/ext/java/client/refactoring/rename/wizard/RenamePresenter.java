@@ -356,39 +356,45 @@ public class RenamePresenter implements ActionDelegate {
 
     private void applyRefactoring(RefactoringSession session) {
         refactorService.applyRefactoring(session).then(refactoringResult -> {
+            List<ChangeInfo> changes = refactoringResult.getChanges();
             if (refactoringResult.getSeverity() == OK) {
                 view.hide();
-                refactoringUpdater.updateAfterRefactoring(refactoringResult.getChanges(), () -> {
-                    final Resource[] resources = refactorInfo != null ? refactorInfo.getResources() : null;
-                    Project project = null;
-
-                    if (resources != null && resources.length == 1) {
-                        final Optional<Project> optProject = resources[0].getRelatedProject();
-                        if (optProject.isPresent()) {
-                            project = optProject.get();
-                        }
-                    } else {
-                        final Resource resource = appContext.getResource();
-                        if (resource != null) {
-                            final Optional<Project> optProject = resource.getRelatedProject();
-                            if (optProject.isPresent()) {
-                                project = optProject.get();
-                            }
-                        }
-                    }
-
-                    if (project != null) {
-                        refactorService.reindexProject(project.getLocation().toString());
-                    }
-
-                    setEditorFocus();
-                    refactoringUpdater.handleMovingFiles(refactoringResult);
-                });
+                updateAfterRefactoring(changes)
+                        .then(refactoringUpdater.handleMovingFiles(changes)
+                                                .then(sendFileTrackingResumeEvent()));
             } else {
                 view.showErrorMessage(refactoringResult);
-                refactoringUpdater.handleMovingFiles(refactoringResult);
+                refactoringUpdater.handleMovingFiles(changes)
+                                  .then(sendFileTrackingResumeEvent());
             }
         });
+    }
+
+    private Promise<Void> updateAfterRefactoring(List<ChangeInfo> changes) {
+        return refactoringUpdater.updateAfterRefactoring(changes).then(arg -> {
+            final Resource[] resources = refactorInfo != null ? refactorInfo.getResources() : null;
+            Project project = null;
+
+            final Resource resource = (resources != null && resources.length == 1) ? resources[0] : appContext.getResource();
+            if (resource != null) {
+                project = resource.getProject();
+            }
+
+            if (project != null) {
+                refactorService.reindexProject(project.getLocation().toString());
+            }
+
+            setEditorFocus();
+        });
+    }
+
+    private Promise<Void> sendFileTrackingResumeEvent() {
+        return clientServerEventService.sendFileTrackingResumeEvent()
+                                       .then(success -> {
+                                           Log.error(getClass(),
+                                                     "************************* sendFileTrackingResumeEvent success");
+                                           eventBus.fireEvent(newFileTrackingResumedEvent());
+                                       });
     }
 
     private Promise<ChangeCreationResult> prepareRenameChanges(final RefactoringSession session) {
@@ -463,5 +469,4 @@ public class RenamePresenter implements ActionDelegate {
 
         return dto;
     }
-
 }
