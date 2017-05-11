@@ -48,6 +48,7 @@ import {CheListHeader} from './list/che-list-header.directive';
 import {CheListHeaderColumn} from './list/che-list-header-column.directive';
 import {CheListTitle} from './list/che-list-title.directive';
 import {CheListItemChecked} from './list/che-list-item-checked.directive';
+import {CheListHelperFactory} from './list/che-list-helper.factory';
 import {CheLoader} from './loader/che-loader.directive';
 import {CheLoaderCrane} from './loader/che-loader-crane.directive';
 import {ChePanelCtrl} from './panel/che-panel.controller';
@@ -73,7 +74,7 @@ import {DemoSourceRender} from './html-source/demo-source-render.directive';
 
 export class WidgetConfig {
 
-  constructor(register) {
+  constructor(register: che.IRegisterService) {
 
     // accordion
     register.directive('cheAccordion', CheAccordion)
@@ -123,6 +124,7 @@ export class WidgetConfig {
       .directive('cheListItem', CheListItem)
       .directive('cheListHeader', CheListHeader)
       .directive('cheListHeaderColumn', CheListHeaderColumn)
+      .factory('cheListHelperFactory', CheListHelperFactory)
 
       .directive('cheLoader', CheLoader)
       .directive('cheLoaderCrane', CheLoaderCrane)
@@ -155,6 +157,6 @@ export class WidgetConfig {
       .directive('chePopup', ChePopup)
       .directive('cheModalPopup', CheModalPopup)
       // show area
-      .directive('cheShowArea', CheShowArea)
+      .directive('cheShowArea', CheShowArea);
   }
 }
