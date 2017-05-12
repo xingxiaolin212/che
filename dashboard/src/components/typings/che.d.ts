@@ -277,4 +277,10 @@ declare namespace _che {
     button?: any;
     policies?: any;
   }
+
+  export interface IRegistry {
+    url: string;
+    username: string;
+    password: string;
+  }
 }
