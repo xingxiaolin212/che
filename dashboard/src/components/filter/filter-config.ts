@@ -10,11 +10,15 @@
  */
 'use strict';
 import {CheNumberRoundFilter} from './number-round/number-round.filter';
+import {ChangeUnitFilter} from './change-unit.filter';
 
 export class FilterConfig {
 
   constructor(register: che.IRegisterService) {
+
     new CheNumberRoundFilter(register);
+    new ChangeUnitFilter(register);
+
   }
 
 }
