@@ -10,8 +10,8 @@
  */
 'use strict';
 import {ConfirmDialogService} from '../../../components/service/confirm-dialog/confirm-dialog.service';
-import {CheAPI} from "../../../components/api/che-api.factory";
-import {CheNotification} from "../../../components/notification/che-notification.factory";
+import {CheAPI} from '../../../components/api/che-api.factory';
+import {CheNotification} from '../../../components/notification/che-notification.factory';
 
 /**
  * Controller for the factories.
