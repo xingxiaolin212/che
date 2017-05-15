@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.che.api.project.server;
 
+import com.google.common.hash.Hashing;
+
 import org.eclipse.che.api.core.ConflictException;
 import org.eclipse.che.api.core.ForbiddenException;
 import org.eclipse.che.api.core.NotFoundException;
@@ -29,9 +31,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.String.format;
+import static java.nio.charset.Charset.defaultCharset;
 import static org.eclipse.che.api.project.shared.Constants.CHE_DIR;
 
 /**
@@ -40,7 +44,6 @@ import static org.eclipse.che.api.project.shared.Constants.CHE_DIR;
 @Singleton
 public class EditorWorkingCopyManager {
     private static final String WORKING_COPIES_DIR = "/" + CHE_DIR + "/workingCopies";
-//    private static final String OUTGOING_METHOD    = "track:editor-content";
 
     private Provider<ProjectManager>                    projectManagerProvider;
     private EventService                                eventService;
@@ -148,27 +151,24 @@ public class EditorWorkingCopyManager {
                 case START: {
                     String path = operation.getPath();
                     EditorWorkingCopy workingCopy = workingCopiesStorage.get(path);
-                    if (workingCopy != null) {
-                        System.out.println("*********** EditorWorkingCopyManager working copy already exist !!! ");
-                        //TODO check hashes of contents for working copy and base file
-                    } else {
-                        System.out.println("*********** EditorWorkingCopyManager CREATE working copy ");
+                    if (workingCopy == null) {
                         createWorkingCopy(path);
                     }
 
-                    break;
-                }
-                case RESUME: {
-//                    requestUpdateContent();
+                    // At opening file we can have persistent working copy ONLY when user has unsaved data
+                    // TODO We need provide ability to compare and save this unsaved data
                     break;
                 }
                 case STOP: {
                     String path = operation.getPath();
-                    //TODO check hashes of contents for working copy and base file and remove persitent copy
-                    EditorWorkingCopy workingCopy = workingCopiesStorage.remove(path);
+                    if (isWorkingCopyHasUnsavedData(path)) {
+                        //at this case we do not remove persistent working copy to have ability to recover unsaved data
+                        // when the file will be open later
+                        return;
+                    }
 
                     VirtualFileEntry persistentWorkingCopy = getPersistentWorkingCopy(path, operation.getProjectPath());
-                    if (workingCopy != null) {
+                    if (persistentWorkingCopy != null) {
                         persistentWorkingCopy.remove();
                     }
                     break;
@@ -183,25 +183,26 @@ public class EditorWorkingCopyManager {
                     }
 
                     EditorWorkingCopy workingCopy = workingCopiesStorage.remove(oldPath);
-                    if (workingCopy != null) {
-                        String newWorkingCopyPath = getWorkingCopyFileName(newPath);
-                        workingCopy.setPath(newWorkingCopyPath);
-                        workingCopiesStorage.put(newPath, workingCopy);
-
-                        String projectPath = workingCopy.getProjectPath();
-                        VirtualFileEntry persistentWorkingCopy = getPersistentWorkingCopy(oldPath, projectPath);
-                        if (persistentWorkingCopy != null) {
-                            persistentWorkingCopy.remove();
-                        }
-
-                        FolderEntry persistentWorkingCopiesStorage = getPersistentWorkingCopiesStorage(projectPath);
-                        if (persistentWorkingCopiesStorage == null) {
-                            persistentWorkingCopiesStorage = createWorkingCopiesStorage(projectPath);
-                        }
-
-                        persistentWorkingCopiesStorage.createFile(newWorkingCopyPath, workingCopy.getContentAsBytes());
-
+                    if (workingCopy == null) {
+                        return;
                     }
+
+                    String workingCopyNewPath = getWorkingCopyPath(newPath);
+                    workingCopy.setPath(workingCopyNewPath);
+                    workingCopiesStorage.put(newPath, workingCopy);
+
+                    String projectPath = workingCopy.getProjectPath();
+                    VirtualFileEntry persistentWorkingCopy = getPersistentWorkingCopy(oldPath, projectPath);
+                    if (persistentWorkingCopy != null) {
+                        persistentWorkingCopy.remove();
+                    }
+
+                    FolderEntry persistentWorkingCopiesStorage = getPersistentWorkingCopiesStorage(projectPath);
+                    if (persistentWorkingCopiesStorage == null) {
+                        persistentWorkingCopiesStorage = createWorkingCopiesStorage(projectPath);
+                    }
+
+                    persistentWorkingCopiesStorage.createFile(workingCopyNewPath, workingCopy.getContentAsBytes());
                     break;
                 }
 
@@ -221,16 +222,35 @@ public class EditorWorkingCopyManager {
         }
     }
 
-//    private void requestUpdateContent() {
-//
-//    }
+    private boolean isWorkingCopyHasUnsavedData(String path) {
+        try {
+            EditorWorkingCopy workingCopy = workingCopiesStorage.remove(path);
+            FileEntry originalFile = originalFile = projectManagerProvider.get().asFile(path);
+            if (workingCopy == null || originalFile == null) {
+                return false;
+            }
+
+            String workingCopyContent = workingCopy.getContentAsString();
+            String originalFileContent = originalFile.getVirtualFile().getContentAsString();
+            if (workingCopyContent == null || originalFileContent == null) {
+                return false;
+            }
+
+            String workingCopyHash = Hashing.md5().hashString(workingCopyContent, defaultCharset()).toString();
+            String originalFileHash = Hashing.md5().hashString(originalFileContent, defaultCharset()).toString();
+            if (!Objects.equals(workingCopyHash, originalFileHash)) {
+                return true;
+            }
+        } catch (NotFoundException | ServerException | ForbiddenException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
     private EditorWorkingCopy createWorkingCopy(String filePath)
             throws NotFoundException, ServerException, ConflictException, ForbiddenException, IOException {
 
-        //TODO get projectPath from file, remove parametr
         FileEntry file = projectManagerProvider.get().asFile(filePath);
-
         if (file == null) {
             //TODO
             return null;
@@ -243,7 +263,7 @@ public class EditorWorkingCopyManager {
         }
 
 
-        String workingCopyPath = getWorkingCopyFileName(filePath);
+        String workingCopyPath = getWorkingCopyPath(filePath);
         byte[] content = file.contentAsBytes();
         persistentWorkingCopiesStorage.createFile(workingCopyPath, content);
 
@@ -260,7 +280,7 @@ public class EditorWorkingCopyManager {
                 return null;
             }
 
-            String workingCopyPath = getWorkingCopyFileName(filePath);
+            String workingCopyPath = getWorkingCopyPath(filePath);
             return workingCopiesStorage.getChild(workingCopyPath);
         } catch (ServerException e) {
             //ignore
@@ -297,7 +317,7 @@ public class EditorWorkingCopyManager {
         }
     }
 
-    private String getWorkingCopyFileName(String path) {
+    private String getWorkingCopyPath(String path) {
         if (path.startsWith("/")) {
             path = path.substring(1, path.length());
         }

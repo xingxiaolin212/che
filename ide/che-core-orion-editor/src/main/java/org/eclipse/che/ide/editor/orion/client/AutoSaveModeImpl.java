@@ -163,10 +163,9 @@ public class AutoSaveModeImpl implements AutoSaveMode, EditorSettingsChangedHand
     @Override
     public void onActivePartChanged(ActivePartChangedEvent event) {
         PartPresenter activePart = event.getActivePart();
-        if (!(activePart instanceof EditorPartPresenter)) {
-            return;
+        if (activePart instanceof EditorPartPresenter) {
+            activeEditor = (EditorPartPresenter)activePart;
         }
-        activeEditor = (EditorPartPresenter)activePart;
     }
 
     @Override
@@ -256,12 +255,12 @@ public class AutoSaveModeImpl implements AutoSaveMode, EditorSettingsChangedHand
         String projectPath = project.getPath();
         Type type = dirtyRegion.getType().equals(DirtyRegion.INSERT) ? INSERT : REMOVE;
 
-        final EditorChangesDto changes = dtoFactory.createDto(EditorChangesDto.class)
-                                                   .withType(type)
-                                                   .withProjectPath(projectPath)
-                                                   .withFileLocation(filePath)
-                                                   .withOffset(dirtyRegion.getOffset())
-                                                   .withText(dirtyRegion.getText());
+        EditorChangesDto changes = dtoFactory.createDto(EditorChangesDto.class)
+                                             .withType(type)
+                                             .withProjectPath(projectPath)
+                                             .withFileLocation(filePath)
+                                             .withOffset(dirtyRegion.getOffset())
+                                             .withText(dirtyRegion.getText());
 
         int length = dirtyRegion.getLength();
         if (DirtyRegion.REMOVE.equals(dirtyRegion.getType())) {
