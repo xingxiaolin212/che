@@ -11,17 +11,43 @@
 'use strict';
 import {CheService} from '../api/che-service.factory';
 
+const DEFAULT_BRANDING = {
+  title: 'Eclipse Che',
+  name: 'Eclipse Che',
+  logoFile: 'che-logo.svg',
+  logoTextFile: 'che-logo-text.svg',
+  favicon: 'favicon.ico',
+  loader: 'loader.svg',
+  ideResources: '/_app/',
+  helpPath: 'https://www.eclipse.org/che/',
+  helpTitle: 'Community',
+  supportEmail: 'wish@codenvy.com',
+  oauthDocs: 'Configure OAuth in the che.properties file.',
+  cli : {
+    configName : 'che.env',
+    name : 'CHE'
+  },
+  docs : {
+    stack: '/docs/getting-started/runtime-stacks/index.html',
+    workspace: '/docs/getting-started/intro/index.html'
+  }
+};
+
+
 /**
  * This class is handling the branding data in Che
  * @author Florent Benoit
  */
 export class CheBranding {
-  $q: ng.IQService;
-  $rootScope: che.IRootScopeService;
-  $http: ng.IHttpService;
-  cheService: CheService;
+  promise: ng.IPromise;
+/*  private $q: ng.IQService;*/
+  private $rootScope: che.IRootScopeService;
+  private $http: ng.IHttpService;
+  private cheService: CheService;
+  private deferred: ng.IDeferred;
+  private docs: { stack: string; workspace: string };
+  private callbacks: Map<string, Function> = new Map();
 
-  private docs: { stack: string; workspace: string};
     /**
      * Default constructor that is using resource
      * @ngInject for Dependency injection
@@ -44,14 +70,9 @@ export class CheBranding {
     }
 
     updateData() {
-
-        let assetPrefix = 'assets/branding/';
-
-        // load data
-        this.$http.get(assetPrefix + 'product.json').then((data: any) => {
-
-            let brandingData = data.data;
-
+        const assetPrefix = 'assets/branding/';
+        this.$http.get(assetPrefix + 'product.json').then((branding: {data: any}) => {
+            const brandingData = branding.data;
             this.$rootScope.branding = {
                 title: brandingData.title,
                 name: brandingData.name,
@@ -64,7 +85,10 @@ export class CheBranding {
                 helpTitle : brandingData.helpTitle,
                 supportEmail: brandingData.supportEmail,
                 oauthDocs: brandingData.oauthDocs,
-                docs: brandingData.docs
+                docs: {
+                  stack: brandingData.docs && brandingData.docs.stack ? brandingData.docs.stack : this.docs.stack,
+                  workspace: brandingData.docs && brandingData.docs.workspace ? brandingData.docs.workspace :  this.docs.workspace
+                }
             };
 
             this.productName = this.$rootScope.branding.title;
@@ -81,15 +105,41 @@ export class CheBranding {
               this.cli = {
                 configName : this.name + 'env file',
                 name : 'PRODUCT_'
-              }
+              };
             } else {
               this.cli = this.$rootScope.branding.cli;
             }
             this.docs = this.$rootScope.branding.docs;
             this.deferred.resolve(this.$rootScope.branding);
+        }).finally(() => {
+
+
+          this.callbacks.forEach((callback: Function) => {
+            callback(this.$rootScope.branding);
+          });
         });
 
     }
+
+  /**
+   * Registers a callback function.
+   * @param callbackId {string}
+   * @param callback {Function}
+   */
+  registerCallback(callbackId: string, callback: Function): void {
+    this.callbacks.set(callbackId, callback);
+  }
+
+  /**
+   * Unregisters the callback function by Id.
+   * @param callbackId {string}
+   */
+  unregisterCallback(callbackId: string): void {
+    if (!this.callbacks.has(callbackId)) {
+      return;
+    }
+    this.callbacks.delete(callbackId);
+  }
 
     getName() {
       return this.name;
