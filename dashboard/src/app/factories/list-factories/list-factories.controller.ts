@@ -120,7 +120,7 @@ export class ListFactoriesController {
       const deleteFactoryPromises = [];
 
       selectedFactoriesIds.forEach((factoryId: string) => {
-        this.cheListHelper.const[factoryId] = false;
+        this.cheListHelper.itemsSelectionStatus[factoryId] = false;
 
         const promise = this.cheAPI.getFactory().deleteFactoryById(factoryId);
 
