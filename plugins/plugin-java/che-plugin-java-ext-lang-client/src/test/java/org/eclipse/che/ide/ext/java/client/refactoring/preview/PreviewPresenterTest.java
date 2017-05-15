@@ -20,6 +20,7 @@ import org.eclipse.che.ide.api.editor.EditorAgent;
 import org.eclipse.che.ide.api.editor.EditorInput;
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
 import org.eclipse.che.ide.api.editor.texteditor.TextEditor;
+import org.eclipse.che.ide.api.event.ng.ClientServerEventService;
 import org.eclipse.che.ide.api.resources.VirtualFile;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.ext.java.client.refactoring.RefactorInfo;
@@ -103,6 +104,8 @@ public class PreviewPresenterTest {
     private Promise<Void>               changeEnableStatePromise;
     @Mock
     private EventBus                    eventBus;
+    @Mock
+    private ClientServerEventService    clientServerEventService;
 
     @Captor
     private ArgumentCaptor<Operation<RefactoringPreview>> refactoringPreviewOperation;
@@ -137,7 +140,8 @@ public class PreviewPresenterTest {
                                          editorAgent,
                                          refactoringUpdater,
                                          refactoringService,
-                                         eventBus);
+                                         eventBus,
+                                         clientServerEventService);
     }
 
     @Test

@@ -78,7 +78,7 @@ public class ClasspathManagerTest extends BaseTest {
         mavenServerManager.setLocalRepository(localRepository);
         MavenWrapperManager wrapperManager = new MavenWrapperManager(mavenServerManager);
         mavenProjectManager =
-                new MavenProjectManager(wrapperManager, mavenServerManager, terminal, mavenNotifier, new EclipseWorkspaceProvider());
+                new MavenProjectManager(wrapperManager, mavenServerManager, null, terminal, mavenNotifier, new EclipseWorkspaceProvider());
         classpathManager = new ClasspathManager(root.getAbsolutePath(), wrapperManager, mavenProjectManager, terminal, mavenNotifier);
         mavenWorkspace = new MavenWorkspace(mavenProjectManager, mavenNotifier, new MavenExecutorService(), projectRegistryProvider,
                                             new MavenCommunication() {

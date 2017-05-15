@@ -257,9 +257,11 @@ public class RefactoringManager {
      *         when refactoring session not found.
      */
     public RefactoringResult applyRefactoring(String sessionId) throws RefactoringException {
+        System.out.println("/////////////////////// applyRefactoring");
         RefactoringSession session = getRefactoringSession(sessionId);
         RefactoringResult result = session.apply();
         deleteRefactoringSession(sessionId);
+        System.out.println("/////////////////////// applyRefactoring FINISH ");
         return result;
     }
 
@@ -358,12 +360,14 @@ public class RefactoringManager {
      */
     public RefactoringResult applyLinkedRename(LinkedRenameRefactoringApply apply)
             throws RefactoringException, CoreException {
+        System.out.println("/////////////////////// applyLinkedRename ");
         RefactoringSession session = getRefactoringSession(apply.getSessionId());
         if (session instanceof RenameLinkedModeRefactoringSession) {
             RenameLinkedModeRefactoringSession renameSession = (RenameLinkedModeRefactoringSession)session;
             try {
                 RefactoringResult refactoringResult = renameSession.doRename(apply.getNewName());
                 deleteRefactoringSession(apply.getSessionId());
+                System.out.println("/////////////////////// applyLinkedRename FINISH ");
                 return refactoringResult;
             } catch (InvocationTargetException | InterruptedException | AssertionFailedException e) {
                 LOG.error(e.getMessage(), e);

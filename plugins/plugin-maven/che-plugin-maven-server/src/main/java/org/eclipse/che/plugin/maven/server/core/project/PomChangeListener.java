@@ -16,10 +16,12 @@ import com.google.inject.name.Named;
 
 import org.eclipse.che.api.core.notification.EventService;
 import org.eclipse.che.api.core.notification.EventSubscriber;
+import org.eclipse.che.api.project.server.notification.EditorContentUpdatedEvent;
 import org.eclipse.che.api.project.server.notification.ProjectItemModifiedEvent;
 import org.eclipse.che.api.project.shared.dto.event.PomModifiedEventDto;
 import org.eclipse.che.commons.schedule.executor.ThreadPullLauncher;
 import org.eclipse.che.ide.maven.tools.Model;
+import org.eclipse.che.maven.data.MavenConstants;
 import org.eclipse.che.plugin.maven.server.core.EclipseWorkspaceProvider;
 import org.eclipse.che.plugin.maven.server.core.MavenWorkspace;
 import org.eclipse.core.resources.IProject;
@@ -34,6 +36,8 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static org.eclipse.che.maven.data.MavenConstants.POM_FILE_NAME;
 
 /**
  * @author Evgen Vidolob
@@ -58,11 +62,25 @@ public class PomChangeListener {
 
         launcher.scheduleWithFixedDelay(this::updateProms, 20, 3, TimeUnit.SECONDS);
 
+        eventService.subscribe(new EventSubscriber<EditorContentUpdatedEvent>() {
+            @Override
+            public void onEvent(EditorContentUpdatedEvent event) {
+                String eventPath = event.getChanges().getFileLocation();
+                if (!eventPath.endsWith(POM_FILE_NAME)) {
+                    return;
+                }
+
+                if (pomIsValid(eventPath)) {
+                    projectToUpdate.add(new Path(eventPath).removeLastSegments(1).toOSString());
+                }
+            }
+        });
+
         eventService.subscribe(new EventSubscriber<ProjectItemModifiedEvent>() {
             @Override
             public void onEvent(ProjectItemModifiedEvent event) {
                 String eventPath = event.getPath();
-                if (!event.isFolder() && eventPath.endsWith("pom.xml")) {
+                if (!event.isFolder() && eventPath.endsWith(POM_FILE_NAME)) {
                     //TODO update only pom file that in root of project
 //                    if(event.getProject().equals(eventPath.substring(0, eventPath.lastIndexOf("pom.xml") - 1))) {
                     if (pomIsValid(eventPath)) {

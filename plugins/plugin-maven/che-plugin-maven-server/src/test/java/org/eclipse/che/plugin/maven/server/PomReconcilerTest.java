@@ -76,7 +76,7 @@ public class PomReconcilerTest extends BaseTest {
 
         MavenWrapperManager wrapperManager = new MavenWrapperManager(mavenServerManager);
         projectManager =
-                new MavenProjectManager(wrapperManager, mavenServerManager, terminal, mavenNotifier, new EclipseWorkspaceProvider());
+                new MavenProjectManager(wrapperManager, mavenServerManager, null, terminal, mavenNotifier, new EclipseWorkspaceProvider());
 
 
 
@@ -105,7 +105,7 @@ public class PomReconcilerTest extends BaseTest {
 
     @Test
     public void testProblemPosition() throws Exception {
-        MavenServerService serverService = new MavenServerService(null, projectRegistry, pm, projectManager, null, null);
+        MavenServerService serverService = new MavenServerService(null, projectRegistry, null, null, null);
         FolderEntry testProject = createTestProject("A", "");
         VirtualFileEntry child = testProject.getChild("pom.xml");
         String newContent = getPomContent("<ss");
@@ -122,7 +122,7 @@ public class PomReconcilerTest extends BaseTest {
 
     @Test
     public void testReconcilePomWhenMavenProjectIsNotFound() throws Exception {
-        MavenServerService serverService = new MavenServerService(null, projectRegistry, pm, projectManager, null, null);
+        MavenServerService serverService = new MavenServerService(null, projectRegistry, null, null, null);
         FolderEntry testProject = createTestProject(PROJECT_NAME, "");
         VirtualFileEntry pom = testProject.getChild("pom.xml");
 
@@ -140,7 +140,7 @@ public class PomReconcilerTest extends BaseTest {
                             "        <version>3.8.1</version>\n" +
                             "        <scope>test</scope>\n" +
                             "    </dependency>\n";
-        MavenServerService serverService = new MavenServerService(null, projectRegistry, pm, projectManager, null, null);
+        MavenServerService serverService = new MavenServerService(null, projectRegistry, null, null, null);
         FolderEntry testProject = createTestProject(PROJECT_NAME, getPomContentWithDependency(dependency));
         VirtualFileEntry pom = testProject.getChild("pom.xml");
         IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(PROJECT_NAME);
@@ -161,7 +161,7 @@ public class PomReconcilerTest extends BaseTest {
                                   "        <version>33333333.8.1</version>\n" +
                                   "        <scope>test</scope>\n" +
                                   "    </dependency>\n";
-        MavenServerService serverService = new MavenServerService(null, projectRegistry, pm, projectManager, null, null);
+        MavenServerService serverService = new MavenServerService(null, projectRegistry, null, null, null);
         FolderEntry testProject = createTestProject(PROJECT_NAME, getPomContentWithDependency(brokenDependency));
         VirtualFileEntry pom = testProject.getChild("pom.xml");
         IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(PROJECT_NAME);
@@ -183,7 +183,7 @@ public class PomReconcilerTest extends BaseTest {
                                   "        <version>3.8.1</version>\n" +
                                   "        <scope>test</scope>\n" +
                                   "    </dependency>\n";
-        MavenServerService serverService = new MavenServerService(null, projectRegistry, pm, projectManager, null, null);
+        MavenServerService serverService = new MavenServerService(null, projectRegistry, null, null, null);
         FolderEntry testProject = createTestProject(PROJECT_NAME, getPomContentWithDependency(brokenDependency));
         VirtualFileEntry pom = testProject.getChild("pom.xml");
         IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(PROJECT_NAME);
@@ -205,7 +205,7 @@ public class PomReconcilerTest extends BaseTest {
                                   "        <version>3.8.1</version>\n" +
                                   "        <scope>test</scope>\n" +
                                   "    </dependency>\n";
-        MavenServerService serverService = new MavenServerService(null, projectRegistry, pm, projectManager, null, null);
+        MavenServerService serverService = new MavenServerService(null, projectRegistry, null, null, null);
         FolderEntry testProject = createTestProject(PROJECT_NAME, getPomContentWithDependency(brokenDependency));
         VirtualFileEntry pom = testProject.getChild("pom.xml");
         IProject project = ResourcesPlugin.getWorkspace().getRoot().getProject(PROJECT_NAME);

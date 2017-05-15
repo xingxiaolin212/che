@@ -23,6 +23,7 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.editor.EditorAgent;
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
 import org.eclipse.che.ide.api.editor.texteditor.TextEditor;
+import org.eclipse.che.ide.api.event.ng.ClientServerEventService;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification.Status;
 import org.eclipse.che.ide.api.resources.Container;
@@ -46,13 +47,16 @@ import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringResult;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringSession;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringStatus;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.ReorgDestination;
+import org.eclipse.che.ide.util.loging.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
-import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingMoveEvent;
-import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingResumeEvent;
-import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingSuspendEvent;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingMovedEvent;
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingResumedEvent;
+import static org.eclipse.che.ide.api.event.ng.FileTrackingEvent.newFileTrackingSuspendedEvent;
 import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
 import static org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringStatus.ERROR;
 import static org.eclipse.che.ide.ext.java.shared.dto.refactoring.RefactoringStatus.FATAL;
@@ -78,6 +82,7 @@ public class MovePresenter implements MoveView.ActionDelegate {
     private final JavaLocalizationConstant locale;
     private final NotificationManager      notificationManager;
     private final EventBus                 eventBus;
+    private final ClientServerEventService clientServerEventService;
 
     protected RefactorInfo refactorInfo;
     private   String       refactoringSessionId;
@@ -91,11 +96,14 @@ public class MovePresenter implements MoveView.ActionDelegate {
                          JavaNavigationService navigationService,
                          DtoFactory dtoFactory,
                          JavaLocalizationConstant locale,
-                         NotificationManager notificationManager, EventBus eventBus) {
+                         NotificationManager notificationManager,
+                         EventBus eventBus,
+                         ClientServerEventService clientServerEventService) {
         this.view = view;
         this.refactoringUpdater = refactoringUpdater;
         this.editorAgent = editorAgent;
         this.eventBus = eventBus;
+        this.clientServerEventService = clientServerEventService;
         this.view.setDelegate(this);
 
         this.previewPresenter = previewPresenter;
@@ -225,33 +233,10 @@ public class MovePresenter implements MoveView.ActionDelegate {
             @Override
             public void apply(ChangeCreationResult arg) throws OperationException {
                 if (arg.isCanShowPreviewPage()) {
-                    eventBus.fireEvent(newFileTrackingSuspendEvent());
-
-                    refactorService.applyRefactoring(session).then(new Operation<RefactoringResult>() {
-                        @Override
-                        public void apply(RefactoringResult arg) throws OperationException {
-                            if (arg.getSeverity() == OK) {
-                                view.hide();
-                                refactoringUpdater.updateAfterRefactoring(arg.getChanges());
-
-                                final Resource[] resources = refactorInfo.getResources();
-
-                                if (resources != null && resources.length == 1) {
-                                    refactorService.reindexProject(resources[0].getRelatedProject().get().getLocation().toString());
-                                }
-
-                            } else {
-                                view.showErrorMessage(arg);
-                            }
-
-                            for (ChangeInfo change : arg.getChanges()) {
-                                final String path = change.getPath();
-                                final String oldPath = change.getOldPath();
-
-                                eventBus.fireEvent(newFileTrackingMoveEvent(path, oldPath));
-                            }
-                            eventBus.fireEvent(newFileTrackingResumeEvent());
-                        }
+                    Log.error(getClass(), "++++++++++++++ before suspend ");
+                    clientServerEventService.sendFileTrackingSuspendEvent().then(success -> {
+                        eventBus.fireEvent(newFileTrackingSuspendedEvent());
+                        applyRefactoring(session);
                     });
                 } else {
                     view.showErrorMessage(arg.getStatus());
@@ -263,6 +248,40 @@ public class MovePresenter implements MoveView.ActionDelegate {
                 notificationManager.notify(locale.applyMoveError(), error.getMessage(), Status.FAIL, FLOAT_MODE);
             }
         });
+    }
+
+    private void applyRefactoring(RefactoringSession session) {
+        refactorService.applyRefactoring(session).then(refactoringResult -> {
+            List<ChangeInfo> changes = refactoringResult.getChanges();
+            if (refactoringResult.getSeverity() == OK) {
+                view.hide();
+                refactoringUpdater.updateAfterRefactoring(changes).then(arg -> {
+                    Project project = null;
+                    Resource[] resources = refactorInfo.getResources();
+                    if (resources != null && resources.length == 1) {
+                        project = resources[0].getProject();
+                    }
+
+                    if (project != null) {
+                        refactorService.reindexProject(project.getPath());
+                    }
+
+                    refactoringUpdater.handleMovingFiles(changes).then(sendFileTrackingResumeEvent());
+                });
+            } else {
+                view.showErrorMessage(refactoringResult);
+                refactoringUpdater.handleMovingFiles(changes).then(sendFileTrackingResumeEvent());
+            }
+        });
+    }
+
+    private Promise<Void> sendFileTrackingResumeEvent() {
+        return clientServerEventService.sendFileTrackingResumeEvent()
+                                       .then(success -> {
+                                           Log.error(getClass(),
+                                                     "************************* sendFileTrackingResumeEvent success");
+                                           eventBus.fireEvent(newFileTrackingResumedEvent());
+                                       });
     }
 
     /** {@inheritDoc} */

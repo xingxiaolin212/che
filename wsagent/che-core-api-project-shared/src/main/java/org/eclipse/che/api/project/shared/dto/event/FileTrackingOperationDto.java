@@ -22,6 +22,10 @@ public interface FileTrackingOperationDto {
 
     FileTrackingOperationDto withOldPath(String oldPath);
 
+    String getProjectPath();
+
+    FileTrackingOperationDto withProjectPath(String projectPath);
+
     Type getType();
 
     FileTrackingOperationDto withType(Type type);

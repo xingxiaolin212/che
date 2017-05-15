@@ -87,7 +87,7 @@ public class WorkspaceTest extends BaseTest {
         };
         MavenWrapperManager wrapperManager = new MavenWrapperManager(mavenServerManager);
         mavenProjectManager =
-                new MavenProjectManager(wrapperManager, mavenServerManager, terminal, mavenNotifier, new EclipseWorkspaceProvider());
+                new MavenProjectManager(wrapperManager, mavenServerManager, null, terminal, mavenNotifier, new EclipseWorkspaceProvider());
         mavenWorkspace = new MavenWorkspace(mavenProjectManager,
                                             mavenNotifier,
                                             new MavenExecutorService(),
